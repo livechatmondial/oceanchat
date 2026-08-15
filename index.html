@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OceanChat</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0077b6, #00b4d8);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat {
+      width: 90%;
+      max-width: 500px;
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      color: #0077b6;
+      text-align: center;
+    }
+
+    p {
+      text-align: center;
+      color: #555;
+    }
+
+    input {
+      width: 70%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+
+    button {
+      padding: 12px 18px;
+      background: #0077b6;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    #messages {
+      min-height: 100px;
+      margin: 20px 0;
+      padding: 10px;
+      background: #f1f9ff;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="chat">
+    <h1>🌊 OceanChat</h1>
+    <p>Bienvenue sur OceanChat</p>
+
+    <div id="messages"></div>
+
+    <input id="message" type="text" placeholder="Écris un message...">
+    <button onclick="sendMessage()">Envoyer</button>
+  </div>
+
+  <script>
+    function sendMessage() {
+      const input = document.getElementById("message");
+      const messages = document.getElementById("messages");
+
+      if (input.value.trim() !== "") {
+        const message = document.createElement("p");
+        message.textContent = "💬 " + input.value;
+        messages.appendChild(message);
+        input.value = "";
+      }
+    }
+  </script>
+
+</body>
+</html>
