@@ -1,0 +1,114 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0757c9, #e51b35);
+    color: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    width: 92%;
+    max-width: 520px;
+    background: #ffffff;
+    padding: 35px 25px;
+    border-radius: 25px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+}
+
+.logo {
+    font-size: 55px;
+    margin-bottom: 5px;
+}
+
+h1 {
+    margin: 5px 0 10px;
+    color: #0757c9;
+    font-size: 32px;
+}
+
+h1 span {
+    color: #e51b35;
+}
+
+.subtitle {
+    color: #555;
+    font-size: 17px;
+    margin-bottom: 30px;
+}
+
+.icons {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin: 25px 0;
+}
+
+.icon {
+    font-size: 38px;
+}
+
+.chat {
+    color: #0757c9;
+}
+
+.heart {
+    color: #e51b35;
+}
+
+.meet {
+    color: #0757c9;
+}
+
+.button {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    margin: 12px 0;
+    border-radius: 12px;
+    text-decoration: none;
+    color: white;
+    font-size: 17px;
+    font-weight: bold;
+    background: #0757c9;
+    transition: 0.2s;
+}
+
+.button:hover {
+    transform: scale(1.02);
+    background: #0649a8;
+}
+
+.button.red {
+    background: #e51b35;
+}
+
+.button.red:hover {
+    background: #c9142b;
+}
+
+.features {
+    margin-top: 25px;
+    display: grid;
+    gap: 10px;
+}
+
+.feature {
+    background: #f5f7fb;
+    padding: 12px;
+    border-radius: 10px;
+    color: #444;
+}
+
+.footer {
+    margin-top: 25px;
+    font-size: 13px;
+    color: #777;
+}
