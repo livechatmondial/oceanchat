@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription - OceanChat</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f8fa;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: 50px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #159bb5;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 13px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 8px;
+      background: #159bb5;
+      color: white;
+      font-size: 17px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0d8299;
+    }
+
+    #message {
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    a {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: #159bb5;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>❤️ OceanChat</h1>
+
+  <h2>Créer un compte</h2>
+
+  <input
+    type="text"
+    id="username"
+    placeholder="Nom d'utilisateur"
+    required
+  >
+
+  <input
+    type="email"
+    id="email"
+    placeholder="Adresse email"
+    required
+  >
+
+  <input
+    type="password"
+    id="password"
+    placeholder="Mot de passe"
+    required
+  >
+
+  <button onclick="inscription()">
+    Créer mon compte
+  </button>
+
+  <p id="message"></p>
+
+  <a href="connexion.html">
+    J'ai déjà un compte
+  </a>
+
+</div>
+
+<script>
+
+  // ==========================================
+  // REMPLACE CES DEUX VALEURS PAR CELLES
+  // DE TON PROJET SUPABASE
+  // ==========================================
+
+  const SUPABASE_URL = "TON_URL_SUPABASE";
+
+  const SUPABASE_ANON_KEY = "TA_CLE_ANON_SUPABASE";
+
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+
+  async function inscription() {
+
+    const username = document.getElementById("username").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    const message = document.getElementById("message");
+
+    if (!username || !email || !password) {
+      message.style.color = "red";
+      message.textContent = "Veuillez remplir tous les champs.";
+      return;
+    }
+
+    if (password.length < 6) {
+      message.style.color = "red";
+      message.textContent =
+        "Le mot de passe doit contenir au moins 6 caractères.";
+      return;
+    }
+
+    message.style.color = "#159bb5";
+    message.textContent = "Création du compte...";
+
+    try {
+
+      const { data, error } =
+        await supabaseClient.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              username: username
+            }
+          }
+        });
+
+      if (error) {
+        message.style.color = "red";
+        message.textContent = error.message;
+        return;
+      }
+
+      message.style.color = "green";
+
+      message.textContent =
+        "Compte créé ! Vérifiez votre email pour confirmer votre inscription.";
+
+    } catch (error) {
+
+      message.style.color = "red";
+      message.textContent =
+        "Une erreur est survenue. Réessayez.";
+
+      console.error(error);
+    }
+  }
+
+</script>
+
+</body>
+</html>
