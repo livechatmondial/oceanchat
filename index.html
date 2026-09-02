@@ -3,30 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat International</title>
+    <title>OceanChat - Chat en Temps Réel</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-
     <div class="container">
-        <h1>🌍 Chat International</h1>
+        <!-- En-tête -->
+        <header class="header">
+            <h1>🌊 OceanChat</h1>
+            <p>Chat en temps réel - Connectez-vous avec le monde</p>
+        </header>
 
-        <p>Discute avec des personnes du monde entier.</p>
-
-        <div class="buttons">
-            <a href="inscription.html" class="button">
-                Créer un compte
-            </a>
-
-            <a href="#" class="button secondary">
-                Se connecter
-            </a>
+        <!-- Zone Profil -->
+        <div class="profile-section">
+            <h2>Votre Profil</h2>
+            <form id="profileForm" class="profile-form">
+                <div class="form-row">
+                    <input type="text" id="pseudo" placeholder="Pseudo" required maxlength="20">
+                    <input type="number" id="age" placeholder="Âge" min="13" max="120" required>
+                </div>
+                <div class="form-row">
+                    <select id="sexe" required>
+                        <option value="">Sélectionnez votre sexe</option>
+                        <option value="homme">Homme</option>
+                        <option value="femme">Femme</option>
+                        <option value="autre">Autre</option>
+                    </select>
+                    <select id="pays" required>
+                        <option value="">Sélectionnez votre pays</option>
+                        <option value="france">France</option>
+                        <option value="belgique">Belgique</option>
+                        <option value="suisse">Suisse</option>
+                        <option value="canada">Canada</option>
+                        <option value="maroc">Maroc</option>
+                        <option value="algerie">Algérie</option>
+                        <option value="tunisie">Tunisie</option>
+                        <option value="senegal">Sénégal</option>
+                        <option value="autre">Autre</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-connect">Se Connecter</button>
+            </form>
         </div>
 
-        <p class="free">💬 Chat gratuit • 🌎 International • 🔒 Sécurisé</p>
+        <!-- Zone Chat -->
+        <div class="chat-section" id="chatSection" style="display: none;">
+            <div class="chat-header">
+                <span id="userInfo"></span>
+                <button class="btn-logout" onclick="logout()">Déconnexion</button>
+            </div>
+
+            <div class="messages" id="messages">
+                <div class="message system">Bienvenue dans OceanChat ! 👋</div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="messageInput" placeholder="Écrivez votre message..." autocomplete="off">
+                <button onclick="sendMessage()" class="btn-send">Envoyer</button>
+            </div>
+
+            <!-- Utilisateurs en ligne -->
+            <div class="online-users">
+                <h3>Utilisateurs en ligne</h3>
+                <div id="usersList" class="users-list"></div>
+            </div>
+        </div>
+
+        <!-- Section Inscription en bas -->
+        <footer class="footer">
+            <div class="signup-section">
+                <h2>Créer un Compte</h2>
+                <p>Inscrivez-vous pour sauvegarder votre profil et accéder à plus de fonctionnalités</p>
+                <form id="signupForm" class="signup-form">
+                    <div class="form-row">
+                        <input type="email" placeholder="Email" required>
+                        <input type="password" placeholder="Mot de passe" required>
+                    </div>
+                    <div class="form-row">
+                        <input type="password" placeholder="Confirmer le mot de passe" required>
+                        <button type="submit" class="btn-signup">S'inscrire</button>
+                    </div>
+                    <p class="terms">En vous inscrivant, vous acceptez nos conditions d'utilisation</p>
+                </form>
+            </div>
+        </footer>
     </div>
 
+    <script src="script.js"></script>
 </body>
 </html>
-

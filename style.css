@@ -1,114 +1,319 @@
 * {
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
 }
 
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
-    background: linear-gradient(135deg, #0757c9, #e51b35);
-    color: #222;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 20px;
 }
 
 .container {
-    width: 92%;
-    max-width: 520px;
-    background: #ffffff;
-    padding: 35px 25px;
-    border-radius: 25px;
-    text-align: center;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
 }
 
-.logo {
-    font-size: 55px;
+/* En-tête */
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+/* Section Profil */
+.profile-section {
+    padding: 40px;
+    background: #f8f9fa;
+}
+
+.profile-section h2 {
+    margin-bottom: 25px;
+    color: #333;
+    font-size: 1.8em;
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+input, select {
+    padding: 12px 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.3s;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+input::placeholder {
+    color: #999;
+}
+
+/* Boutons */
+.btn-connect, .btn-send, .btn-signup {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-connect, .btn-signup {
+    width: 100%;
+    padding: 15px;
+}
+
+.btn-connect:hover, .btn-send:hover, .btn-signup:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-connect:active, .btn-send:active, .btn-signup:active {
+    transform: translateY(0);
+}
+
+.btn-logout {
+    padding: 8px 15px;
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.2s;
+}
+
+.btn-logout:hover {
+    background: #ff5252;
+}
+
+/* Section Chat */
+.chat-section {
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+    padding: 20px;
+    background: white;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: #333;
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #fafafa;
+}
+
+.message {
+    margin-bottom: 12px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    word-wrap: break-word;
+}
+
+.message.user {
+    background: #667eea;
+    color: white;
+    margin-left: 40px;
+    text-align: right;
+}
+
+.message.other {
+    background: #e0e0e0;
+    color: #333;
+    margin-right: 40px;
+}
+
+.message.system {
+    background: #fff3cd;
+    color: #856404;
+    text-align: center;
+    font-style: italic;
+}
+
+.message-author {
+    font-size: 0.85em;
+    opacity: 0.8;
     margin-bottom: 5px;
 }
 
-h1 {
-    margin: 5px 0 10px;
-    color: #0757c9;
-    font-size: 32px;
-}
-
-h1 span {
-    color: #e51b35;
-}
-
-.subtitle {
-    color: #555;
-    font-size: 17px;
-    margin-bottom: 30px;
-}
-
-.icons {
+.input-area {
     display: flex;
-    justify-content: center;
-    gap: 25px;
-    margin: 25px 0;
-}
-
-.icon {
-    font-size: 38px;
-}
-
-.chat {
-    color: #0757c9;
-}
-
-.heart {
-    color: #e51b35;
-}
-
-.meet {
-    color: #0757c9;
-}
-
-.button {
-    display: block;
-    width: 100%;
-    padding: 16px;
-    margin: 12px 0;
-    border-radius: 12px;
-    text-decoration: none;
-    color: white;
-    font-size: 17px;
-    font-weight: bold;
-    background: #0757c9;
-    transition: 0.2s;
-}
-
-.button:hover {
-    transform: scale(1.02);
-    background: #0649a8;
-}
-
-.button.red {
-    background: #e51b35;
-}
-
-.button.red:hover {
-    background: #c9142b;
-}
-
-.features {
-    margin-top: 25px;
-    display: grid;
     gap: 10px;
 }
 
-.feature {
-    background: #f5f7fb;
-    padding: 12px;
-    border-radius: 10px;
-    color: #444;
+.input-area input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
 }
 
+.input-area input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn-send {
+    padding: 12px 25px;
+}
+
+/* Utilisateurs en ligne */
+.online-users {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.online-users h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.users-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.user-badge {
+    background: #667eea;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.9em;
+}
+
+/* Footer - Section Inscription */
 .footer {
-    margin-top: 25px;
-    font-size: 13px;
-    color: #777;
+    background: #f8f9fa;
+    padding: 40px 20px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.signup-section {
+    text-align: center;
+}
+
+.signup-section h2 {
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 1.8em;
+}
+
+.signup-section p {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 1.1em;
+}
+
+.signup-form {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.terms {
+    font-size: 0.9em;
+    color: #999;
+    margin-top: 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .header h1 {
+        font-size: 1.8em;
+    }
+
+    .chat-section {
+        height: 400px;
+    }
+
+    .message.user {
+        margin-left: 20px;
+    }
+
+    .message.other {
+        margin-right: 20px;
+    }
+
+    .profile-section,
+    .footer {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .header {
+        padding: 20px;
+    }
+
+    .header h1 {
+        font-size: 1.5em;
+    }
+
+    .container {
+        border-radius: 10px;
+    }
 }
