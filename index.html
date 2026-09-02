@@ -14,8 +14,8 @@
             <p>Chat en temps réel - Connectez-vous avec le monde</p>
         </header>
 
-        <!-- Zone Profil -->
-        <div class="profile-section">
+        <!-- SECTION LOGIN -->
+        <div id="loginSection" class="login-section">
             <h2>Votre Profil</h2>
             <form id="profileForm" class="profile-form">
                 <div class="form-row">
@@ -46,26 +46,55 @@
             </form>
         </div>
 
-        <!-- Zone Chat -->
-        <div class="chat-section" id="chatSection" style="display: none;">
-            <div class="chat-header">
-                <span id="userInfo"></span>
-                <button class="btn-logout" onclick="logout()">Déconnexion</button>
-            </div>
+        <!-- SECTION CHAT PRINCIPAL -->
+        <div id="chatSection" class="chat-container" style="display: none;">
+            <div class="chat-layout">
+                <!-- SIDEBAR - Liste des utilisateurs -->
+                <aside class="sidebar">
+                    <div class="sidebar-header">
+                        <h3>👥 Utilisateurs en ligne</h3>
+                        <span id="onlineCount" class="online-count">0</span>
+                    </div>
+                    <div id="usersList" class="users-list"></div>
+                </aside>
 
-            <div class="messages" id="messages">
-                <div class="message system">Bienvenue dans OceanChat ! 👋</div>
-            </div>
+                <!-- MAIN CHAT AREA -->
+                <main class="chat-main">
+                    <!-- En-tête du chat -->
+                    <div class="chat-header">
+                        <div>
+                            <h2 id="chatTitle">Chat Public</h2>
+                            <p id="chatSubtitle">Connecté en tant que <span id="userDisplay"></span></p>
+                        </div>
+                        <button class="btn-logout" onclick="logout()">Déconnexion</button>
+                    </div>
 
-            <div class="input-area">
-                <input type="text" id="messageInput" placeholder="Écrivez votre message..." autocomplete="off">
-                <button onclick="sendMessage()" class="btn-send">Envoyer</button>
-            </div>
+                    <!-- Zone des messages -->
+                    <div class="messages" id="messages">
+                        <div class="message system">Bienvenue dans OceanChat ! 👋</div>
+                    </div>
 
-            <!-- Utilisateurs en ligne -->
-            <div class="online-users">
-                <h3>Utilisateurs en ligne</h3>
-                <div id="usersList" class="users-list"></div>
+                    <!-- Zone d'entrée -->
+                    <div class="input-area">
+                        <input type="text" id="messageInput" placeholder="Écrivez votre message..." autocomplete="off">
+                        <button onclick="sendMessage()" class="btn-send">Envoyer</button>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- MODAL MESSAGES PRIVÉS -->
+        <div id="privateModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="privateTitle">Messages Privés</h2>
+                    <button class="close-modal" onclick="closePrivateChat()">&times;</button>
+                </div>
+                <div class="private-messages" id="privateMessages"></div>
+                <div class="private-input-area">
+                    <input type="text" id="privateMessageInput" placeholder="Message privé..." autocomplete="off">
+                    <button onclick="sendPrivateMessage()" class="btn-send">Envoyer</button>
+                </div>
             </div>
         </div>
 
