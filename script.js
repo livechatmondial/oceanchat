@@ -1,350 +1,1040 @@
-// État de l'application
+```javascript
+// 🌊 OceanChat - Chat en temps réel avec Supabase
+
 let currentUser = null;
 let messages = [];
-let privateMessages = new Map(); // { recipientId: [messages] }
+let privateMessages = new Map();
 let selectedPrivateUser = null;
 
-// Stockage local des utilisateurs connectés
 const connectedUsers = new Map();
 
-// EVENT: Soumission du profil
-document.getElementById('profileForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const pseudo = document.getElementById('pseudo').value.trim();
-    const age = document.getElementById('age').value;
-    const sexe = document.getElementById('sexe').value;
-    const pays = document.getElementById('pays').value;
+let presenceChannel = null;
+let publicChannel = null;
+let privateChannel = null;
 
-    if (!pseudo || !age || !sexe || !pays) {
-        alert('Veuillez remplir tous les champs');
-        return;
-    }
 
-    // Créer l'utilisateur
-    currentUser = {
-        id: Date.now(),
-        pseudo: pseudo,
-        age: parseInt(age),
-        sexe: sexe,
-        pays: pays,
-        connectedAt: new Date()
-    };
+// ======================================================
+// SUPABASE
+// ======================================================
 
-    // Ajouter aux utilisateurs connectés
-    connectedUsers.set(currentUser.id, currentUser);
+const SUPABASE_URL = window.OCEANCHAT_SUPABASE_URL;
+const SUPABASE_KEY = window.OCEANCHAT_SUPABASE_KEY;
 
-    // Afficher la section chat
-    document.getElementById('loginSection').style.display = 'none';
-    document.getElementById('chatSection').style.display = 'flex';
+let supabaseClient = null;
 
-    // Mettre à jour les infos utilisateur
-    updateUserInfo();
-    updateUsersList();
+if (
+    window.supabase &&
+    SUPABASE_URL &&
+    SUPABASE_KEY
+) {
+    supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+    );
 
-    // Message système
-    addSystemMessage(`${pseudo} a rejoint le chat ! 🎉`);
-});
-
-// EVENT: Soumettre un message public
-document.getElementById('messageInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
-});
-
-// EVENT: Soumettre un message privé
-document.getElementById('privateMessageInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        sendPrivateMessage();
-    }
-});
-
-// FONCTION: Envoyer un message public
-function sendMessage() {
-    const messageInput = document.getElementById('messageInput');
-    const messageText = messageInput.value.trim();
-
-    if (!messageText || !currentUser) return;
-
-    // Créer le message
-    const message = {
-        id: Date.now(),
-        userId: currentUser.id,
-        pseudo: currentUser.pseudo,
-        age: currentUser.age,
-        pays: currentUser.pays,
-        text: messageText,
-        timestamp: new Date()
-    };
-
-    messages.push(message);
-
-    // Afficher le message
-    displayMessage(message, true);
-
-    // Réinitialiser l'input
-    messageInput.value = '';
-    messageInput.focus();
-
-    // Simuler des réponses (optionnel)
-    simulateResponses(messageText);
+    console.log("✅ Supabase connecté");
+} else {
+    console.error("❌ Configuration Supabase manquante");
 }
 
-// FONCTION: Afficher un message public
-function displayMessage(message, isOwn = false) {
-    const messagesContainer = document.getElementById('messages');
-    const messageDiv = document.createElement('div');
-    
-    messageDiv.className = `message ${isOwn ? 'user' : 'other'}`;
-    
-    const time = message.timestamp.toLocaleTimeString('fr-FR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
 
-    messageDiv.innerHTML = `
-        <div class="message-author">${message.pseudo} (${message.age} ans, ${message.pays})</div>
-        <div>${escapeHtml(message.text)}</div>
-        <div class="message-time">${time}</div>
-    `;
+// ======================================================
+// CONNEXION AU PROFIL
+// ======================================================
 
-    messagesContainer.appendChild(messageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
+document.getElementById('profileForm').addEventListener(
+    'submit',
+    async function(e) {
 
-// FONCTION: Ajouter un message système
-function addSystemMessage(text) {
-    const messagesContainer = document.getElementById('messages');
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message system';
-    messageDiv.textContent = text;
-    messagesContainer.appendChild(messageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
+        e.preventDefault();
 
-// FONCTION: Mettre à jour les infos utilisateur
-function updateUserInfo() {
-    if (!currentUser) return;
-    
-    const userDisplay = document.getElementById('userDisplay');
-    userDisplay.textContent = `${currentUser.pseudo} (${currentUser.age} ans, ${currentUser.pays})`;
-}
+        const pseudo =
+            document.getElementById('pseudo').value.trim();
 
-// FONCTION: Mettre à jour la liste des utilisateurs
-function updateUsersList() {
-    const usersList = document.getElementById('usersList');
-    usersList.innerHTML = '';
+        const age =
+            parseInt(document.getElementById('age').value);
 
-    connectedUsers.forEach(user => {
-        if (user.id === currentUser.id) return; // Ne pas afficher l'utilisateur actuel
+        const sexe =
+            document.getElementById('sexe').value;
 
-        const userItem = document.createElement('div');
-        userItem.className = 'user-item';
-        if (selectedPrivateUser && selectedPrivateUser.id === user.id) {
-            userItem.classList.add('active');
+        const pays =
+            document.getElementById('pays').value;
+
+
+        if (!pseudo || !age || !sexe || !pays) {
+
+            alert('Veuillez remplir tous les champs.');
+
+            return;
         }
 
-        userItem.innerHTML = `
-            <div class="user-item-name">👤 ${user.pseudo}</div>
-            <div class="user-item-info">${user.age} ans • ${user.pays}</div>
-            <div class="user-item-info">${user.sexe}</div>
-        `;
 
-        userItem.addEventListener('click', () => openPrivateChat(user));
-        usersList.appendChild(userItem);
-    });
+        if (!supabaseClient) {
 
-    // Mettre à jour le nombre d'utilisateurs
-    document.getElementById('onlineCount').textContent = connectedUsers.size - 1; // Enlever l'utilisateur actuel
-}
+            alert(
+                'La connexion temps réel Supabase n’est pas configurée.'
+            );
 
-// FONCTION: Ouvrir le chat privé
-function openPrivateChat(user) {
-    selectedPrivateUser = user;
+            return;
+        }
 
-    // Mettre à jour le titre et initialiser les messages
-    document.getElementById('privateTitle').textContent = `Chat privé avec ${user.pseudo}`;
-    
-    if (!privateMessages.has(user.id)) {
-        privateMessages.set(user.id, []);
+
+        // Identifiant unique pour cette session
+        currentUser = {
+
+            id: crypto.randomUUID(),
+
+            pseudo: pseudo,
+
+            age: age,
+
+            sexe: sexe,
+
+            pays: pays,
+
+            connectedAt: Date.now()
+        };
+
+
+        document.getElementById(
+            'loginSection'
+        ).style.display = 'none';
+
+
+        document.getElementById(
+            'chatSection'
+        ).style.display = 'flex';
+
+
+        updateUserInfo();
+
+
+        await connectRealtime();
+
     }
+);
 
-    // Afficher le modal
-    document.getElementById('privateModal').style.display = 'flex';
 
-    // Afficher les messages privés
-    displayPrivateMessages(user.id);
+// ======================================================
+// CONNEXION REALTIME
+// ======================================================
 
-    // Focus sur l'input
-    document.getElementById('privateMessageInput').focus();
+async function connectRealtime() {
 
-    // Mettre à jour la liste (pour marquer comme actif)
-    updateUsersList();
+    // -----------------------------
+    // PRÉSENCE : UTILISATEURS EN LIGNE
+    // -----------------------------
+
+    presenceChannel = supabaseClient.channel(
+        'oceanchat-presence',
+        {
+            config: {
+                presence: {
+                    key: currentUser.id
+                }
+            }
+        }
+    );
+
+
+    presenceChannel.on(
+        'presence',
+        { event: 'sync' },
+        updateOnlineUsers
+    );
+
+
+    presenceChannel.on(
+        'presence',
+        { event: 'join' },
+        updateOnlineUsers
+    );
+
+
+    presenceChannel.on(
+        'presence',
+        { event: 'leave' },
+        updateOnlineUsers
+    );
+
+
+    await presenceChannel.subscribe(
+        async function(status) {
+
+            console.log(
+                'Statut présence :',
+                status
+            );
+
+
+            if (status === 'SUBSCRIBED') {
+
+                await presenceChannel.track(
+                    currentUser
+                );
+
+                console.log(
+                    '🟢 Utilisateur visible en ligne'
+                );
+            }
+
+        }
+    );
+
+
+    // -----------------------------
+    // CHAT PUBLIC
+    // -----------------------------
+
+    publicChannel =
+        supabaseClient.channel(
+            'oceanchat-public'
+        );
+
+
+    publicChannel.on(
+        'broadcast',
+        { event: 'message' },
+        function(data) {
+
+            const message =
+                data.payload;
+
+
+            displayMessage(
+                message,
+                message.userId === currentUser.id
+            );
+
+        }
+    );
+
+
+    await publicChannel.subscribe();
+
+
+    // -----------------------------
+    // CHAT PRIVÉ
+    // -----------------------------
+
+    privateChannel =
+        supabaseClient.channel(
+            'oceanchat-private'
+        );
+
+
+    privateChannel.on(
+        'broadcast',
+        { event: 'private-message' },
+        function(data) {
+
+            const message =
+                data.payload;
+
+
+            if (!currentUser) {
+                return;
+            }
+
+
+            if (
+                message.to === currentUser.id &&
+                selectedPrivateUser &&
+                message.from === selectedPrivateUser.id
+            ) {
+
+                if (
+                    !privateMessages.has(
+                        selectedPrivateUser.id
+                    )
+                ) {
+
+                    privateMessages.set(
+                        selectedPrivateUser.id,
+                        []
+                    );
+                }
+
+
+                privateMessages
+                    .get(selectedPrivateUser.id)
+                    .push(message);
+
+
+                displayPrivateMessage(
+                    message,
+                    false
+                );
+            }
+
+        }
+    );
+
+
+    await privateChannel.subscribe();
+
+
+    addSystemMessage(
+        '🟢 Vous êtes connecté en temps réel !'
+    );
 }
 
-// FONCTION: Fermer le chat privé
-function closePrivateChat() {
-    selectedPrivateUser = null;
-    document.getElementById('privateModal').style.display = 'none';
-    document.getElementById('privateMessageInput').value = '';
-    updateUsersList();
-}
 
-// FONCTION: Envoyer un message privé
-function sendPrivateMessage() {
-    if (!selectedPrivateUser) return;
+// ======================================================
+// ACTUALISER LES UTILISATEURS EN LIGNE
+// ======================================================
 
-    const messageInput = document.getElementById('privateMessageInput');
-    const messageText = messageInput.value.trim();
+function updateOnlineUsers() {
 
-    if (!messageText || !currentUser) return;
-
-    // Créer le message privé
-    const message = {
-        id: Date.now(),
-        from: currentUser.id,
-        to: selectedPrivateUser.id,
-        fromPseudo: currentUser.pseudo,
-        toPseudo: selectedPrivateUser.pseudo,
-        text: messageText,
-        timestamp: new Date()
-    };
-
-    // Ajouter à la conversation
-    if (!privateMessages.has(selectedPrivateUser.id)) {
-        privateMessages.set(selectedPrivateUser.id, []);
-    }
-    privateMessages.get(selectedPrivateUser.id).push(message);
-
-    // Afficher le message
-    displayPrivateMessage(message, true);
-
-    // Réinitialiser l'input
-    messageInput.value = '';
-    messageInput.focus();
-}
-
-// FONCTION: Afficher un message privé
-function displayPrivateMessage(message, isOwn = false) {
-    const container = document.getElementById('privateMessages');
-    const messageDiv = document.createElement('div');
-    
-    messageDiv.className = `private-message ${isOwn ? 'sent' : 'received'}`;
-
-    const time = message.timestamp.toLocaleTimeString('fr-FR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
-
-    messageDiv.innerHTML = `
-        <div>${escapeHtml(message.text)}</div>
-        <small style="opacity: 0.7;">${time}</small>
-    `;
-
-    container.appendChild(messageDiv);
-    container.scrollTop = container.scrollHeight;
-}
-
-// FONCTION: Afficher les messages privés d'une conversation
-function displayPrivateMessages(userId) {
-    const container = document.getElementById('privateMessages');
-    container.innerHTML = '';
-
-    const msgs = privateMessages.get(userId) || [];
-
-    if (msgs.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Commencez une conversation ! 💬</div>';
+    if (!presenceChannel) {
         return;
     }
 
-    msgs.forEach(msg => {
-        displayPrivateMessage(msg, msg.from === currentUser.id);
-    });
-}
 
-// FONCTION: Déconnexion
-function logout() {
-    if (!currentUser) return;
+    connectedUsers.clear();
 
-    addSystemMessage(`${currentUser.pseudo} a quitté le chat 👋`);
-    connectedUsers.delete(currentUser.id);
-    currentUser = null;
-    selectedPrivateUser = null;
 
-    // Réinitialiser le formulaire
-    document.getElementById('profileForm').reset();
-    document.getElementById('loginSection').style.display = 'block';
-    document.getElementById('chatSection').style.display = 'none';
-    document.getElementById('privateModal').style.display = 'none';
-    document.getElementById('messages').innerHTML = '<div class="message system">Bienvenue dans OceanChat ! 👋</div>';
-    document.getElementById('messageInput').value = '';
+    const state =
+        presenceChannel.presenceState();
+
+
+    Object.values(state)
+        .flat()
+        .forEach(function(user) {
+
+            if (user && user.id) {
+
+                connectedUsers.set(
+                    user.id,
+                    user
+                );
+            }
+
+        });
+
 
     updateUsersList();
 }
 
-// FONCTION: Simuler des réponses de bot
-function simulateResponses(messageText) {
-    const responses = [
-        '😊 Bonne remarque !',
-        '✨ C\'est intéressant !',
-        '👍 Je suis d\'accord !',
-        '🤔 Que penses-tu de ça ?',
-        '💬 Parle-moi plus !',
-    ];
 
-    if (messageText.toLowerCase().includes('bonjour') || 
-        messageText.toLowerCase().includes('salut') ||
-        messageText.toLowerCase().includes('hello')) {
-        
-        setTimeout(() => {
-            if (currentUser) {
-                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                const botMessage = {
-                    id: Date.now(),
-                    userId: 'bot',
-                    pseudo: '🤖 OceanBot',
-                    age: '?',
-                    pays: 'Web',
-                    text: randomResponse,
-                    timestamp: new Date()
-                };
-                messages.push(botMessage);
-                displayMessage(botMessage, false);
-            }
-        }, 500 + Math.random() * 1000);
+// ======================================================
+// INFORMATIONS UTILISATEUR
+// ======================================================
+
+function updateUserInfo() {
+
+    if (!currentUser) {
+        return;
     }
+
+
+    document.getElementById(
+        'userDisplay'
+    ).textContent =
+        `${currentUser.pseudo} (${currentUser.age} ans, ${currentUser.pays})`;
 }
 
-// FONCTION: Échapper les caractères HTML (sécurité)
+
+// ======================================================
+// LISTE DES UTILISATEURS
+// ======================================================
+
+function updateUsersList() {
+
+    const usersList =
+        document.getElementById('usersList');
+
+
+    usersList.innerHTML = '';
+
+
+    connectedUsers.forEach(
+        function(user) {
+
+            if (
+                !currentUser ||
+                user.id === currentUser.id
+            ) {
+                return;
+            }
+
+
+            const userItem =
+                document.createElement('div');
+
+
+            userItem.className =
+                'user-item';
+
+
+            if (
+                selectedPrivateUser &&
+                selectedPrivateUser.id === user.id
+            ) {
+
+                userItem.classList.add(
+                    'active'
+                );
+            }
+
+
+            userItem.innerHTML = `
+
+                <div class="user-item-name">
+                    🟢 ${escapeHtml(user.pseudo)}
+                </div>
+
+                <div class="user-item-info">
+                    ${user.age} ans •
+                    ${escapeHtml(user.pays)}
+                </div>
+
+                <div class="user-item-info">
+                    ${escapeHtml(user.sexe)}
+                </div>
+
+            `;
+
+
+            userItem.addEventListener(
+                'click',
+                function() {
+
+                    openPrivateChat(user);
+
+                }
+            );
+
+
+            usersList.appendChild(
+                userItem
+            );
+
+        }
+    );
+
+
+    document.getElementById(
+        'onlineCount'
+    ).textContent =
+        Math.max(
+            0,
+            connectedUsers.size - 1
+        );
+}
+
+
+// ======================================================
+// ENVOYER MESSAGE PUBLIC
+// ======================================================
+
+async function sendMessage() {
+
+    const messageInput =
+        document.getElementById(
+            'messageInput'
+        );
+
+
+    const messageText =
+        messageInput.value.trim();
+
+
+    if (
+        !messageText ||
+        !currentUser ||
+        !publicChannel
+    ) {
+        return;
+    }
+
+
+    const message = {
+
+        id: crypto.randomUUID(),
+
+        userId: currentUser.id,
+
+        pseudo: currentUser.pseudo,
+
+        age: currentUser.age,
+
+        pays: currentUser.pays,
+
+        text: messageText,
+
+        timestamp: Date.now()
+    };
+
+
+    await publicChannel.send({
+
+        type: 'broadcast',
+
+        event: 'message',
+
+        payload: message
+
+    });
+
+
+    messageInput.value = '';
+
+    messageInput.focus();
+}
+
+
+// ======================================================
+// AFFICHER MESSAGE PUBLIC
+// ======================================================
+
+function displayMessage(
+    message,
+    isOwn = false
+) {
+
+    const messagesContainer =
+        document.getElementById(
+            'messages'
+        );
+
+
+    const messageDiv =
+        document.createElement(
+            'div'
+        );
+
+
+    messageDiv.className =
+        `message ${isOwn ? 'user' : 'other'}`;
+
+
+    const time =
+        new Date(
+            message.timestamp
+        ).toLocaleTimeString(
+            'fr-FR',
+            {
+                hour: '2-digit',
+                minute: '2-digit'
+            }
+        );
+
+
+    messageDiv.innerHTML = `
+
+        <div class="message-author">
+            ${escapeHtml(message.pseudo)}
+            (${message.age} ans,
+            ${escapeHtml(message.pays)})
+        </div>
+
+        <div>
+            ${escapeHtml(message.text)}
+        </div>
+
+        <div class="message-time">
+            ${time}
+        </div>
+
+    `;
+
+
+    messagesContainer.appendChild(
+        messageDiv
+    );
+
+
+    messagesContainer.scrollTop =
+        messagesContainer.scrollHeight;
+}
+
+
+// ======================================================
+// MESSAGE SYSTÈME
+// ======================================================
+
+function addSystemMessage(text) {
+
+    const messagesContainer =
+        document.getElementById(
+            'messages'
+        );
+
+
+    const messageDiv =
+        document.createElement(
+            'div'
+        );
+
+
+    messageDiv.className =
+        'message system';
+
+
+    messageDiv.textContent =
+        text;
+
+
+    messagesContainer.appendChild(
+        messageDiv
+    );
+
+
+    messagesContainer.scrollTop =
+        messagesContainer.scrollHeight;
+}
+
+
+// ======================================================
+// CHAT PRIVÉ
+// ======================================================
+
+function openPrivateChat(user) {
+
+    selectedPrivateUser =
+        user;
+
+
+    document.getElementById(
+        'privateTitle'
+    ).textContent =
+        `Chat privé avec ${user.pseudo}`;
+
+
+    document.getElementById(
+        'privateModal'
+    ).style.display =
+        'flex';
+
+
+    if (
+        !privateMessages.has(
+            user.id
+        )
+    ) {
+
+        privateMessages.set(
+            user.id,
+            []
+        );
+    }
+
+
+    displayPrivateMessages(
+        user.id
+    );
+
+
+    document.getElementById(
+        'privateMessageInput'
+    ).focus();
+
+
+    updateUsersList();
+}
+
+
+// ======================================================
+// FERMER CHAT PRIVÉ
+// ======================================================
+
+function closePrivateChat() {
+
+    selectedPrivateUser =
+        null;
+
+
+    document.getElementById(
+        'privateModal'
+    ).style.display =
+        'none';
+
+
+    document.getElementById(
+        'privateMessageInput'
+    ).value = '';
+
+
+    updateUsersList();
+}
+
+
+// ======================================================
+// ENVOYER MESSAGE PRIVÉ
+// ======================================================
+
+async function sendPrivateMessage() {
+
+    if (
+        !selectedPrivateUser ||
+        !currentUser ||
+        !privateChannel
+    ) {
+        return;
+    }
+
+
+    const messageInput =
+        document.getElementById(
+            'privateMessageInput'
+        );
+
+
+    const messageText =
+        messageInput.value.trim();
+
+
+    if (!messageText) {
+        return;
+    }
+
+
+    const message = {
+
+        id: crypto.randomUUID(),
+
+        from: currentUser.id,
+
+        to: selectedPrivateUser.id,
+
+        fromPseudo: currentUser.pseudo,
+
+        toPseudo: selectedPrivateUser.pseudo,
+
+        text: messageText,
+
+        timestamp: Date.now()
+    };
+
+
+    if (
+        !privateMessages.has(
+            selectedPrivateUser.id
+        )
+    ) {
+
+        privateMessages.set(
+            selectedPrivateUser.id,
+            []
+        );
+    }
+
+
+    privateMessages
+        .get(selectedPrivateUser.id)
+        .push(message);
+
+
+    await privateChannel.send({
+
+        type: 'broadcast',
+
+        event: 'private-message',
+
+        payload: message
+
+    });
+
+
+    displayPrivateMessage(
+        message,
+        true
+    );
+
+
+    messageInput.value = '';
+
+    messageInput.focus();
+}
+
+
+// ======================================================
+// AFFICHER MESSAGE PRIVÉ
+// ======================================================
+
+function displayPrivateMessage(
+    message,
+    isOwn = false
+) {
+
+    const container =
+        document.getElementById(
+            'privateMessages'
+        );
+
+
+    const messageDiv =
+        document.createElement(
+            'div'
+        );
+
+
+    messageDiv.className =
+        `private-message ${isOwn ? 'sent' : 'received'}`;
+
+
+    const time =
+        new Date(
+            message.timestamp
+        ).toLocaleTimeString(
+            'fr-FR',
+            {
+                hour: '2-digit',
+                minute: '2-digit'
+            }
+        );
+
+
+    messageDiv.innerHTML = `
+
+        <div>
+            ${escapeHtml(message.text)}
+        </div>
+
+        <small style="opacity:0.7;">
+            ${time}
+        </small>
+
+    `;
+
+
+    container.appendChild(
+        messageDiv
+    );
+
+
+    container.scrollTop =
+        container.scrollHeight;
+}
+
+
+// ======================================================
+// AFFICHER HISTORIQUE PRIVÉ
+// ======================================================
+
+function displayPrivateMessages(
+    userId
+) {
+
+    const container =
+        document.getElementById(
+            'privateMessages'
+        );
+
+
+    container.innerHTML = '';
+
+
+    const msgs =
+        privateMessages.get(
+            userId
+        ) || [];
+
+
+    if (msgs.length === 0) {
+
+        container.innerHTML = `
+
+            <div style="
+                text-align:center;
+                color:#999;
+                padding:20px;
+            ">
+                Commencez une conversation ! 💬
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    msgs.forEach(
+        function(msg) {
+
+            displayPrivateMessage(
+                msg,
+                msg.from === currentUser.id
+            );
+
+        }
+    );
+}
+
+
+// ======================================================
+// DÉCONNEXION
+// ======================================================
+
+async function logout() {
+
+    if (!currentUser) {
+        return;
+    }
+
+
+    if (presenceChannel) {
+
+        try {
+
+            await presenceChannel.untrack();
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
+
+        await supabaseClient.removeChannel(
+            presenceChannel
+        );
+    }
+
+
+    if (publicChannel) {
+
+        await supabaseClient.removeChannel(
+            publicChannel
+        );
+    }
+
+
+    if (privateChannel) {
+
+        await supabaseClient.removeChannel(
+            privateChannel
+        );
+    }
+
+
+    presenceChannel = null;
+
+    publicChannel = null;
+
+    privateChannel = null;
+
+    currentUser = null;
+
+    selectedPrivateUser = null;
+
+    connectedUsers.clear();
+
+
+    document.getElementById(
+        'profileForm'
+    ).reset();
+
+
+    document.getElementById(
+        'loginSection'
+    ).style.display =
+        'block';
+
+
+    document.getElementById(
+        'chatSection'
+    ).style.display =
+        'none';
+
+
+    document.getElementById(
+        'privateModal'
+    ).style.display =
+        'none';
+
+
+    document.getElementById(
+        'usersList'
+    ).innerHTML =
+        '';
+
+
+    document.getElementById(
+        'onlineCount'
+    ).textContent =
+        '0';
+
+
+    document.getElementById(
+        'messages'
+    ).innerHTML =
+        '<div class="message system">Bienvenue dans OceanChat ! 👋</div>';
+}
+
+
+// ======================================================
+// TOUCHE ENTRÉE
+// ======================================================
+
+document.getElementById(
+    'messageInput'
+).addEventListener(
+    'keypress',
+    function(e) {
+
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+
+    }
+);
+
+
+document.getElementById(
+    'privateMessageInput'
+).addEventListener(
+    'keypress',
+    function(e) {
+
+        if (e.key === 'Enter') {
+            sendPrivateMessage();
+        }
+
+    }
+);
+
+
+// ======================================================
+// INSCRIPTION
+// ======================================================
+
+document.getElementById(
+    'signupForm'
+).addEventListener(
+    'submit',
+    function(e) {
+
+        e.preventDefault();
+
+        alert(
+            "L'inscription sera activée avec Supabase Auth."
+        );
+
+    }
+);
+
+
+// ======================================================
+// SÉCURITÉ
+// ======================================================
+
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
+
+    const div =
+        document.createElement(
+            'div'
+        );
+
+    div.textContent =
+        String(text);
+
     return div.innerHTML;
 }
 
-// EVENT: Formulaire d'inscription
-document.getElementById('signupForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formInputs = this.querySelectorAll('input');
-    const email = formInputs[0].value;
-    const password = formInputs[1].value;
-    const confirmPassword = formInputs[2].value;
 
-    if (password !== confirmPassword) {
-        alert('Les mots de passe ne correspondent pas');
-        return;
-    }
-
-    if (password.length < 6) {
-        alert('Le mot de passe doit contenir au moins 6 caractères');
-        return;
-    }
-
-    alert(`✅ Inscription réussie pour ${email}!\\n\\nBienvenue sur OceanChat!`);
-    this.reset();
-});
-
-// Initialisation
-console.log('🌊 OceanChat est prêt !');
+console.log(
+    '🌊 OceanChat est prêt !'
+);
+```
