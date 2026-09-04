@@ -42,77 +42,171 @@ if (
 // CONNEXION AU PROFIL
 // ======================================================
 
-document.getElementById('profileForm').addEventListener(
-    'submit',
-    async function(e) {
+const profileForm = document.getElementById('profileForm');
 
-        e.preventDefault();
+if (profileForm) {
 
-        const pseudo =
-            document.getElementById('pseudo').value.trim();
+    profileForm.addEventListener(
+        'submit',
+        async function(e) {
 
-        const age =
-            parseInt(document.getElementById('age').value);
+            // Empêche le formulaire de recharger la page
+            e.preventDefault();
+            e.stopPropagation();
 
-        const sexe =
-            document.getElementById('sexe').value;
+            const pseudo =
+                document.getElementById('pseudo').value.trim();
 
-        const pays =
-            document.getElementById('pays').value;
+            const age =
+                parseInt(
+                    document.getElementById('age').value,
+                    10
+                );
+
+            const sexe =
+                document.getElementById('sexe').value;
+
+            const pays =
+                document.getElementById('pays').value;
 
 
-        if (!pseudo || !age || !sexe || !pays) {
+            // Vérification des champs
+            if (
+                !pseudo ||
+                !age ||
+                !sexe ||
+                !pays
+            ) {
 
-            alert('Veuillez remplir tous les champs.');
+                alert(
+                    'Veuillez remplir tous les champs.'
+                );
 
-            return;
-        }
+                return;
+            }
 
 
-        if (!supabaseClient) {
+            if (
+                age < 18 ||
+                age > 120
+            ) {
 
-            alert(
-                'La connexion temps réel Supabase n’est pas configurée.'
+                alert(
+                    'Veuillez entrer un âge valide.'
+                );
+
+                return;
+            }
+
+
+            // Vérification Supabase
+            if (!supabaseClient) {
+
+                alert(
+                    'Supabase n’est pas configuré. Vérifiez votre fichier de configuration.'
+                );
+
+                return;
+            }
+
+
+            // Identifiant unique de session
+            let userId;
+
+            try {
+
+                userId =
+                    crypto.randomUUID();
+
+            } catch (error) {
+
+                userId =
+                    'user-' +
+                    Date.now() +
+                    '-' +
+                    Math.random()
+                        .toString(36)
+                        .substring(2, 10);
+
+            }
+
+
+            currentUser = {
+
+                id: userId,
+
+                pseudo: pseudo,
+
+                age: age,
+
+                sexe: sexe,
+
+                pays: pays,
+
+                connectedAt: Date.now()
+
+            };
+
+
+            console.log(
+                '👤 Utilisateur connecté :',
+                currentUser
             );
 
-            return;
+
+            // Afficher le chat
+            const loginSection =
+                document.getElementById(
+                    'loginSection'
+                );
+
+            const chatSection =
+                document.getElementById(
+                    'chatSection'
+                );
+
+
+            if (loginSection) {
+
+                loginSection.style.display =
+                    'none';
+
+            }
+
+
+            if (chatSection) {
+
+                chatSection.style.display =
+                    'flex';
+
+            }
+
+
+            updateUserInfo();
+
+
+            // Connexion temps réel
+            try {
+
+                await connectRealtime();
+
+            } catch (error) {
+
+                console.error(
+                    'Erreur connexion temps réel :',
+                    error
+                );
+
+                addSystemMessage(
+                    '⚠️ La connexion temps réel a rencontré un problème.'
+                );
+
+            }
+
         }
+    );
 
-
-        // Identifiant unique pour cette session
-        currentUser = {
-
-            id: crypto.randomUUID(),
-
-            pseudo: pseudo,
-
-            age: age,
-
-            sexe: sexe,
-
-            pays: pays,
-
-            connectedAt: Date.now()
-        };
-
-
-        document.getElementById(
-            'loginSection'
-        ).style.display = 'none';
-
-
-        document.getElementById(
-            'chatSection'
-        ).style.display = 'flex';
-
-
-        updateUserInfo();
-
-
-        await connectRealtime();
-
-    }
-);
+}
 
 
 // ======================================================
@@ -121,39 +215,63 @@ document.getElementById('profileForm').addEventListener(
 
 async function connectRealtime() {
 
+    if (
+        !supabaseClient ||
+        !currentUser
+    ) {
+
+        throw new Error(
+            'Supabase ou utilisateur manquant.'
+        );
+
+    }
+
+
     // -----------------------------
-    // PRÉSENCE : UTILISATEURS EN LIGNE
+    // PRÉSENCE
     // -----------------------------
 
-    presenceChannel = supabaseClient.channel(
-        'oceanchat-presence',
-        {
-            config: {
-                presence: {
-                    key: currentUser.id
+    presenceChannel =
+        supabaseClient.channel(
+            'oceanchat-presence',
+            {
+                config: {
+
+                    presence: {
+
+                        key: currentUser.id
+
+                    }
+
                 }
+
             }
-        }
-    );
+        );
 
 
     presenceChannel.on(
         'presence',
-        { event: 'sync' },
+        {
+            event: 'sync'
+        },
         updateOnlineUsers
     );
 
 
     presenceChannel.on(
         'presence',
-        { event: 'join' },
+        {
+            event: 'join'
+        },
         updateOnlineUsers
     );
 
 
     presenceChannel.on(
         'presence',
-        { event: 'leave' },
+        {
+            event: 'leave'
+        },
         updateOnlineUsers
     );
 
@@ -167,15 +285,19 @@ async function connectRealtime() {
             );
 
 
-            if (status === 'SUBSCRIBED') {
+            if (
+                status === 'SUBSCRIBED'
+            ) {
 
                 await presenceChannel.track(
                     currentUser
                 );
 
+
                 console.log(
                     '🟢 Utilisateur visible en ligne'
                 );
+
             }
 
         }
@@ -194,15 +316,25 @@ async function connectRealtime() {
 
     publicChannel.on(
         'broadcast',
-        { event: 'message' },
+        {
+            event: 'message'
+        },
         function(data) {
 
             const message =
                 data.payload;
 
 
+            if (!message) {
+
+                return;
+
+            }
+
+
             displayMessage(
                 message,
+                currentUser &&
                 message.userId === currentUser.id
             );
 
@@ -225,7 +357,9 @@ async function connectRealtime() {
 
     privateChannel.on(
         'broadcast',
-        { event: 'private-message' },
+        {
+            event: 'private-message'
+        },
         function(data) {
 
             const message =
@@ -233,11 +367,14 @@ async function connectRealtime() {
 
 
             if (!currentUser) {
+
                 return;
+
             }
 
 
             if (
+                message &&
                 message.to === currentUser.id &&
                 selectedPrivateUser &&
                 message.from === selectedPrivateUser.id
@@ -253,18 +390,24 @@ async function connectRealtime() {
                         selectedPrivateUser.id,
                         []
                     );
+
                 }
 
 
                 privateMessages
-                    .get(selectedPrivateUser.id)
-                    .push(message);
+                    .get(
+                        selectedPrivateUser.id
+                    )
+                    .push(
+                        message
+                    );
 
 
                 displayPrivateMessage(
                     message,
                     false
                 );
+
             }
 
         }
@@ -277,6 +420,7 @@ async function connectRealtime() {
     addSystemMessage(
         '🟢 Vous êtes connecté en temps réel !'
     );
+
 }
 
 
@@ -287,7 +431,9 @@ async function connectRealtime() {
 function updateOnlineUsers() {
 
     if (!presenceChannel) {
+
         return;
+
     }
 
 
@@ -300,20 +446,27 @@ function updateOnlineUsers() {
 
     Object.values(state)
         .flat()
-        .forEach(function(user) {
+        .forEach(
+            function(user) {
 
-            if (user && user.id) {
+                if (
+                    user &&
+                    user.id
+                ) {
 
-                connectedUsers.set(
-                    user.id,
-                    user
-                );
+                    connectedUsers.set(
+                        user.id,
+                        user
+                    );
+
+                }
+
             }
-
-        });
+        );
 
 
     updateUsersList();
+
 }
 
 
@@ -324,14 +477,25 @@ function updateOnlineUsers() {
 function updateUserInfo() {
 
     if (!currentUser) {
+
         return;
+
     }
 
 
-    document.getElementById(
-        'userDisplay'
-    ).textContent =
-        `${currentUser.pseudo} (${currentUser.age} ans, ${currentUser.pays})`;
+    const userDisplay =
+        document.getElementById(
+            'userDisplay'
+        );
+
+
+    if (userDisplay) {
+
+        userDisplay.textContent =
+            `${currentUser.pseudo} (${currentUser.age} ans, ${currentUser.pays})`;
+
+    }
+
 }
 
 
@@ -342,7 +506,16 @@ function updateUserInfo() {
 function updateUsersList() {
 
     const usersList =
-        document.getElementById('usersList');
+        document.getElementById(
+            'usersList'
+        );
+
+
+    if (!usersList) {
+
+        return;
+
+    }
 
 
     usersList.innerHTML = '';
@@ -355,12 +528,16 @@ function updateUsersList() {
                 !currentUser ||
                 user.id === currentUser.id
             ) {
+
                 return;
+
             }
 
 
             const userItem =
-                document.createElement('div');
+                document.createElement(
+                    'div'
+                );
 
 
             userItem.className =
@@ -375,6 +552,7 @@ function updateUsersList() {
                 userItem.classList.add(
                     'active'
                 );
+
             }
 
 
@@ -385,7 +563,7 @@ function updateUsersList() {
                 </div>
 
                 <div class="user-item-info">
-                    ${user.age} ans •
+                    ${escapeHtml(String(user.age))} ans •
                     ${escapeHtml(user.pays)}
                 </div>
 
@@ -414,13 +592,22 @@ function updateUsersList() {
     );
 
 
-    document.getElementById(
-        'onlineCount'
-    ).textContent =
-        Math.max(
-            0,
-            connectedUsers.size - 1
+    const onlineCount =
+        document.getElementById(
+            'onlineCount'
         );
+
+
+    if (onlineCount) {
+
+        onlineCount.textContent =
+            Math.max(
+                0,
+                connectedUsers.size - 1
+            );
+
+    }
+
 }
 
 
@@ -436,6 +623,13 @@ async function sendMessage() {
         );
 
 
+    if (!messageInput) {
+
+        return;
+
+    }
+
+
     const messageText =
         messageInput.value.trim();
 
@@ -445,7 +639,9 @@ async function sendMessage() {
         !currentUser ||
         !publicChannel
     ) {
+
         return;
+
     }
 
 
@@ -464,23 +660,47 @@ async function sendMessage() {
         text: messageText,
 
         timestamp: Date.now()
+
     };
 
 
-    await publicChannel.send({
+    try {
 
-        type: 'broadcast',
+        await publicChannel.send({
 
-        event: 'message',
+            type: 'broadcast',
 
-        payload: message
+            event: 'message',
 
-    });
+            payload: message
+
+        });
 
 
-    messageInput.value = '';
+        // Afficher aussi son propre message
+        displayMessage(
+            message,
+            true
+        );
 
-    messageInput.focus();
+
+        messageInput.value = '';
+
+        messageInput.focus();
+
+    } catch (error) {
+
+        console.error(
+            'Erreur envoi message :',
+            error
+        );
+
+        alert(
+            'Impossible d’envoyer le message.'
+        );
+
+    }
+
 }
 
 
@@ -497,6 +717,16 @@ function displayMessage(
         document.getElementById(
             'messages'
         );
+
+
+    if (
+        !messagesContainer ||
+        !message
+    ) {
+
+        return;
+
+    }
 
 
     const messageDiv =
@@ -525,7 +755,7 @@ function displayMessage(
 
         <div class="message-author">
             ${escapeHtml(message.pseudo)}
-            (${message.age} ans,
+            (${escapeHtml(String(message.age))} ans,
             ${escapeHtml(message.pays)})
         </div>
 
@@ -547,6 +777,7 @@ function displayMessage(
 
     messagesContainer.scrollTop =
         messagesContainer.scrollHeight;
+
 }
 
 
@@ -560,6 +791,13 @@ function addSystemMessage(text) {
         document.getElementById(
             'messages'
         );
+
+
+    if (!messagesContainer) {
+
+        return;
+
+    }
 
 
     const messageDiv =
@@ -583,6 +821,7 @@ function addSystemMessage(text) {
 
     messagesContainer.scrollTop =
         messagesContainer.scrollHeight;
+
 }
 
 
@@ -592,20 +831,43 @@ function addSystemMessage(text) {
 
 function openPrivateChat(user) {
 
+    if (!user) {
+
+        return;
+
+    }
+
+
     selectedPrivateUser =
         user;
 
 
-    document.getElementById(
-        'privateTitle'
-    ).textContent =
-        `Chat privé avec ${user.pseudo}`;
+    const privateTitle =
+        document.getElementById(
+            'privateTitle'
+        );
 
 
-    document.getElementById(
-        'privateModal'
-    ).style.display =
-        'flex';
+    if (privateTitle) {
+
+        privateTitle.textContent =
+            `Chat privé avec ${user.pseudo}`;
+
+    }
+
+
+    const privateModal =
+        document.getElementById(
+            'privateModal'
+        );
+
+
+    if (privateModal) {
+
+        privateModal.style.display =
+            'flex';
+
+    }
 
 
     if (
@@ -618,6 +880,7 @@ function openPrivateChat(user) {
             user.id,
             []
         );
+
     }
 
 
@@ -626,12 +889,21 @@ function openPrivateChat(user) {
     );
 
 
-    document.getElementById(
-        'privateMessageInput'
-    ).focus();
+    const privateInput =
+        document.getElementById(
+            'privateMessageInput'
+        );
+
+
+    if (privateInput) {
+
+        privateInput.focus();
+
+    }
 
 
     updateUsersList();
+
 }
 
 
@@ -645,18 +917,35 @@ function closePrivateChat() {
         null;
 
 
-    document.getElementById(
-        'privateModal'
-    ).style.display =
-        'none';
+    const privateModal =
+        document.getElementById(
+            'privateModal'
+        );
 
 
-    document.getElementById(
-        'privateMessageInput'
-    ).value = '';
+    if (privateModal) {
+
+        privateModal.style.display =
+            'none';
+
+    }
+
+
+    const privateInput =
+        document.getElementById(
+            'privateMessageInput'
+        );
+
+
+    if (privateInput) {
+
+        privateInput.value = '';
+
+    }
 
 
     updateUsersList();
+
 }
 
 
@@ -671,7 +960,9 @@ async function sendPrivateMessage() {
         !currentUser ||
         !privateChannel
     ) {
+
         return;
+
     }
 
 
@@ -681,12 +972,21 @@ async function sendPrivateMessage() {
         );
 
 
+    if (!messageInput) {
+
+        return;
+
+    }
+
+
     const messageText =
         messageInput.value.trim();
 
 
     if (!messageText) {
+
         return;
+
     }
 
 
@@ -705,6 +1005,7 @@ async function sendPrivateMessage() {
         text: messageText,
 
         timestamp: Date.now()
+
     };
 
 
@@ -718,34 +1019,55 @@ async function sendPrivateMessage() {
             selectedPrivateUser.id,
             []
         );
+
     }
 
 
     privateMessages
-        .get(selectedPrivateUser.id)
-        .push(message);
+        .get(
+            selectedPrivateUser.id
+        )
+        .push(
+            message
+        );
 
 
-    await privateChannel.send({
+    try {
 
-        type: 'broadcast',
+        await privateChannel.send({
 
-        event: 'private-message',
+            type: 'broadcast',
 
-        payload: message
+            event: 'private-message',
 
-    });
+            payload: message
 
-
-    displayPrivateMessage(
-        message,
-        true
-    );
+        });
 
 
-    messageInput.value = '';
+        displayPrivateMessage(
+            message,
+            true
+        );
 
-    messageInput.focus();
+
+        messageInput.value = '';
+
+        messageInput.focus();
+
+    } catch (error) {
+
+        console.error(
+            'Erreur message privé :',
+            error
+        );
+
+        alert(
+            'Impossible d’envoyer le message privé.'
+        );
+
+    }
+
 }
 
 
@@ -762,6 +1084,16 @@ function displayPrivateMessage(
         document.getElementById(
             'privateMessages'
         );
+
+
+    if (
+        !container ||
+        !message
+    ) {
+
+        return;
+
+    }
 
 
     const messageDiv =
@@ -806,6 +1138,7 @@ function displayPrivateMessage(
 
     container.scrollTop =
         container.scrollHeight;
+
 }
 
 
@@ -821,6 +1154,13 @@ function displayPrivateMessages(
         document.getElementById(
             'privateMessages'
         );
+
+
+    if (!container) {
+
+        return;
+
+    }
 
 
     container.innerHTML = '';
@@ -847,6 +1187,7 @@ function displayPrivateMessages(
         `;
 
         return;
+
     }
 
 
@@ -855,11 +1196,13 @@ function displayPrivateMessages(
 
             displayPrivateMessage(
                 msg,
+                currentUser &&
                 msg.from === currentUser.id
             );
 
         }
     );
+
 }
 
 
@@ -870,7 +1213,9 @@ function displayPrivateMessages(
 async function logout() {
 
     if (!currentUser) {
+
         return;
+
     }
 
 
@@ -882,30 +1227,60 @@ async function logout() {
 
         } catch (error) {
 
-            console.log(error);
+            console.log(
+                'Erreur déconnexion présence :',
+                error
+            );
 
         }
 
 
-        await supabaseClient.removeChannel(
-            presenceChannel
-        );
+        try {
+
+            await supabaseClient.removeChannel(
+                presenceChannel
+            );
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
     }
 
 
     if (publicChannel) {
 
-        await supabaseClient.removeChannel(
-            publicChannel
-        );
+        try {
+
+            await supabaseClient.removeChannel(
+                publicChannel
+            );
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
     }
 
 
     if (privateChannel) {
 
-        await supabaseClient.removeChannel(
-            privateChannel
-        );
+        try {
+
+            await supabaseClient.removeChannel(
+                privateChannel
+            );
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
     }
 
 
@@ -921,46 +1296,104 @@ async function logout() {
 
     connectedUsers.clear();
 
-
-    document.getElementById(
-        'profileForm'
-    ).reset();
+    privateMessages.clear();
 
 
-    document.getElementById(
-        'loginSection'
-    ).style.display =
-        'block';
+    const profileForm =
+        document.getElementById(
+            'profileForm'
+        );
 
 
-    document.getElementById(
-        'chatSection'
-    ).style.display =
-        'none';
+    if (profileForm) {
+
+        profileForm.reset();
+
+    }
 
 
-    document.getElementById(
-        'privateModal'
-    ).style.display =
-        'none';
+    const loginSection =
+        document.getElementById(
+            'loginSection'
+        );
 
 
-    document.getElementById(
-        'usersList'
-    ).innerHTML =
-        '';
+    if (loginSection) {
+
+        loginSection.style.display =
+            'block';
+
+    }
 
 
-    document.getElementById(
-        'onlineCount'
-    ).textContent =
-        '0';
+    const chatSection =
+        document.getElementById(
+            'chatSection'
+        );
 
 
-    document.getElementById(
-        'messages'
-    ).innerHTML =
-        '<div class="message system">Bienvenue dans OceanChat ! 👋</div>';
+    if (chatSection) {
+
+        chatSection.style.display =
+            'none';
+
+    }
+
+
+    const privateModal =
+        document.getElementById(
+            'privateModal'
+        );
+
+
+    if (privateModal) {
+
+        privateModal.style.display =
+            'none';
+
+    }
+
+
+    const usersList =
+        document.getElementById(
+            'usersList'
+        );
+
+
+    if (usersList) {
+
+        usersList.innerHTML = '';
+
+    }
+
+
+    const onlineCount =
+        document.getElementById(
+            'onlineCount'
+        );
+
+
+    if (onlineCount) {
+
+        onlineCount.textContent =
+            '0';
+
+    }
+
+
+    const messagesContainer =
+        document.getElementById(
+            'messages'
+        );
+
+
+    if (messagesContainer) {
+
+        messagesContainer.innerHTML =
+            '<div class="message system">Bienvenue dans OceanChat ! 👋</div>';
+
+    }
+
 }
 
 
@@ -968,52 +1401,88 @@ async function logout() {
 // TOUCHE ENTRÉE
 // ======================================================
 
-document.getElementById(
-    'messageInput'
-).addEventListener(
-    'keypress',
-    function(e) {
+const messageInput =
+    document.getElementById(
+        'messageInput'
+    );
 
-        if (e.key === 'Enter') {
-            sendMessage();
+
+if (messageInput) {
+
+    messageInput.addEventListener(
+        'keypress',
+        function(e) {
+
+            if (
+                e.key === 'Enter'
+            ) {
+
+                e.preventDefault();
+
+                sendMessage();
+
+            }
+
         }
+    );
 
-    }
-);
+}
 
 
-document.getElementById(
-    'privateMessageInput'
-).addEventListener(
-    'keypress',
-    function(e) {
+const privateMessageInput =
+    document.getElementById(
+        'privateMessageInput'
+    );
 
-        if (e.key === 'Enter') {
-            sendPrivateMessage();
+
+if (privateMessageInput) {
+
+    privateMessageInput.addEventListener(
+        'keypress',
+        function(e) {
+
+            if (
+                e.key === 'Enter'
+            ) {
+
+                e.preventDefault();
+
+                sendPrivateMessage();
+
+            }
+
         }
+    );
 
-    }
-);
+}
 
 
 // ======================================================
 // INSCRIPTION
 // ======================================================
 
-document.getElementById(
-    'signupForm'
-).addEventListener(
-    'submit',
-    function(e) {
+const signupForm =
+    document.getElementById(
+        'signupForm'
+    );
 
-        e.preventDefault();
 
-        alert(
-            "L'inscription sera activée avec Supabase Auth."
-        );
+if (signupForm) {
 
-    }
-);
+    signupForm.addEventListener(
+        'submit',
+        function(e) {
+
+            e.preventDefault();
+
+            alert(
+                "L'inscription avec Supabase Auth sera activée prochainement."
+            );
+
+        }
+    );
+
+}
 
 
 // ======================================================
@@ -1027,12 +1496,18 @@ function escapeHtml(text) {
             'div'
         );
 
+    // CORRECTION DE L'ERREUR =p
     div.textContent =
         String(text);
 
     return div.innerHTML;
+
 }
 
+
+// ======================================================
+// OCEANCHAT PRÊT
+// ======================================================
 
 console.log(
     '🌊 OceanChat est prêt !'
