@@ -1,547 +1,538 @@
 // 🌊 OceanChat - Script principal
 
-const SUPABASE_URL = window.OCEANCHAT_SUPABASE_URL;
-const SUPABASE_KEY = window.OCEANCHAT_SUPABASE_KEY;
+document.addEventListener("DOMContentLoaded", () => {
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  alert("Erreur : configuration Supabase introuvable.");
-  throw new Error("Configuration Supabase manquante.");
-}
+  console.log("OceanChat : script chargé");
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+  // =========================
+  // SUPABASE
+  // =========================
 
-// ===============================
-// UTILISATEUR ACTUEL
-// ===============================
-
-let currentUser = {
-  id: crypto.randomUUID(),
-  pseudo: "",
-  age: "",
-  sexe: "",
-  pays: ""
-};
-
-let presenceChannel = null;
-let publicChannel = null;
-let privateChannel = null;
-
-let onlineUsers = new Map();
-
-// Conversations privées
-const privateConversations = new Map();
-
-let activeConversationId = null;
-
-// ===============================
-// ELEMENTS HTML
-// ===============================
-
-const loginSection = document.getElementById("loginSection");
-const chatSection = document.getElementById("chatSection");
-
-const profileForm = document.getElementById("profileForm");
-
-const pseudoInput = document.getElementById("pseudo");
-const ageInput = document.getElementById("age");
-const sexeInput = document.getElementById("sexe");
-const paysInput = document.getElementById("pays");
-
-const usersList = document.getElementById("usersList");
-const onlineCount = document.getElementById("onlineCount");
-
-const logoutBtn = document.getElementById("logoutBtn");
-
-const messages = document.getElementById("messages");
-const messageForm = document.getElementById("messageForm");
-const messageInput = document.getElementById("messageInput");
-
-const privateModal = document.getElementById("privateModal");
-const privateTitle = document.getElementById("privateTitle");
-const privateMessages = document.getElementById("privateMessages");
-
-const privateMessageForm =
-  document.getElementById("privateMessageForm");
-
-const privateMessageInput =
-  document.getElementById("privateMessageInput");
-
-const minimizePrivate =
-  document.getElementById("minimizePrivate");
-
-const closePrivate =
-  document.getElementById("closePrivate");
-
-const privateChatsBar =
-  document.getElementById("privateChatsBar");
-
-// ===============================
-// CONNEXION
-// ===============================
-
-profileForm.addEventListener("submit", async function (event) {
-  event.preventDefault();
-
-  const pseudo = pseudoInput.value.trim();
-  const age = ageInput.value.trim();
-  const sexe = sexeInput.value;
-  const pays = paysInput.value.trim();
-
-  if (!pseudo || !age || !sexe || !pays) {
-    alert("Veuillez remplir tous les champs.");
+  if (
+    typeof window.supabase === "undefined" ||
+    !window.OCEANCHAT_SUPABASE_URL ||
+    !window.OCEANCHAT_SUPABASE_KEY
+  ) {
+    console.error("Configuration Supabase manquante.");
+    alert("Erreur de configuration. Vérifie supabase-config.js.");
     return;
   }
 
-  currentUser.pseudo = pseudo;
-  currentUser.age = age;
-  currentUser.sexe = sexe;
-  currentUser.pays = pays;
-
-  loginSection.style.display = "none";
-  chatSection.style.display = "flex";
-
-  await startChat();
-});
-
-// ===============================
-// DEMARRER LE CHAT
-// ===============================
-
-async function startChat() {
-  await startPresence();
-  startPublicChat();
-  startPrivateChat();
-
-  addSystemMessage(
-    `Bienvenue ${currentUser.pseudo} 👋`
-  );
-}
-
-// ===============================
-// PRESENCE
-// ===============================
-
-async function startPresence() {
-  presenceChannel = supabaseClient.channel(
-    "oceanchat-presence",
-    {
-      config: {
-        presence: {
-          key: currentUser.id
-        }
-      }
-    }
+  const supabaseClient = window.supabase.createClient(
+    window.OCEANCHAT_SUPABASE_URL,
+    window.OCEANCHAT_SUPABASE_KEY
   );
 
-  presenceChannel.on(
-    "presence",
-    {
-      event: "sync"
-    },
-    function () {
-      updateOnlineUsers();
-    }
-  );
+  // =========================
+  // ELEMENTS
+  // =========================
 
-  presenceChannel.on(
-    "presence",
-    {
-      event: "join"
-    },
-    function () {
-      updateOnlineUsers();
-    }
-  );
+  const loginSection = document.getElementById("loginSection");
+  const chatSection = document.getElementById("chatSection");
+  const profileForm = document.getElementById("profileForm");
 
-  presenceChannel.on(
-    "presence",
-    {
-      event: "leave"
-    },
-    function () {
-      updateOnlineUsers();
-    }
-  );
+  const pseudoInput = document.getElementById("pseudo");
+  const ageInput = document.getElementById("age");
+  const sexeInput = document.getElementById("sexe");
+  const paysInput = document.getElementById("pays");
 
-  await presenceChannel.subscribe(async function (status) {
-    if (status === "SUBSCRIBED") {
-      await presenceChannel.track({
-        id: currentUser.id,
-        pseudo: currentUser.pseudo,
-        age: currentUser.age,
-        sexe: currentUser.sexe,
-        pays: currentUser.pays
-      });
-    }
-  });
-}
+  const usersList = document.getElementById("usersList");
+  const onlineCount = document.getElementById("onlineCount");
+  const logoutBtn = document.getElementById("logoutBtn");
 
-// ===============================
-// UTILISATEURS EN LIGNE
-// ===============================
+  const messages = document.getElementById("messages");
+  const messageForm = document.getElementById("messageForm");
+  const messageInput = document.getElementById("messageInput");
 
-function updateOnlineUsers() {
-  if (!presenceChannel) return;
+  const privateModal = document.getElementById("privateModal");
+  const privateTitle = document.getElementById("privateTitle");
+  const privateMessages = document.getElementById("privateMessages");
 
-  const state = presenceChannel.presenceState();
+  const privateMessageForm =
+    document.getElementById("privateMessageForm");
 
-  onlineUsers.clear();
+  const privateMessageInput =
+    document.getElementById("privateMessageInput");
 
-  Object.keys(state).forEach(function (key) {
-    const entries = state[key];
+  const minimizePrivate =
+    document.getElementById("minimizePrivate");
 
-    if (!entries || entries.length === 0) return;
+  const closePrivate =
+    document.getElementById("closePrivate");
 
-    const user = entries[entries.length - 1];
+  const privateChatsBar =
+    document.getElementById("privateChatsBar");
 
-    if (user.id !== currentUser.id) {
-      onlineUsers.set(user.id, user);
-    }
-  });
-
-  renderOnlineUsers();
-}
-
-// ===============================
-// AFFICHER LES UTILISATEURS
-// ===============================
-
-function renderOnlineUsers() {
-  usersList.innerHTML = "";
-
-  onlineCount.textContent = onlineUsers.size;
-
-  if (onlineUsers.size === 0) {
-    const empty = document.createElement("div");
-
-    empty.className = "empty-users";
-    empty.textContent = "Aucun autre utilisateur en ligne.";
-
-    usersList.appendChild(empty);
-
+  // Vérification des éléments
+  if (!profileForm) {
+    console.error("profileForm introuvable.");
     return;
   }
 
-  onlineUsers.forEach(function (user) {
-    const button = document.createElement("button");
+  // =========================
+  // UTILISATEUR
+  // =========================
 
-    button.className = "online-user";
+  let currentUser = {
+    id: crypto.randomUUID(),
+    pseudo: "",
+    age: "",
+    sexe: "",
+    pays: ""
+  };
 
-    button.type = "button";
+  let presenceChannel = null;
+  let publicChannel = null;
+  let privateChannel = null;
 
-    const name = document.createElement("strong");
-    name.textContent = user.pseudo || "Utilisateur";
+  const onlineUsers = new Map();
+  const privateConversations = new Map();
 
-    const info = document.createElement("span");
+  let activeConversationId = null;
 
-    info.textContent =
-      `${user.age || ""} ans • ${user.sexe || ""} • ${user.pays || ""}`;
+  // =========================
+  // CONNECTER
+  // =========================
 
-    button.appendChild(name);
-    button.appendChild(info);
+  profileForm.addEventListener("submit", async (event) => {
 
-    button.addEventListener("click", function () {
-      openPrivateConversation(user);
-    });
+    // TRÈS IMPORTANT :
+    // empêche la page de revenir à la page initiale
+    event.preventDefault();
+    event.stopPropagation();
 
-    usersList.appendChild(button);
-  });
-}
+    console.log("Bouton Connecter cliqué");
 
-// ===============================
-// CHAT PUBLIC
-// ===============================
+    const pseudo = pseudoInput.value.trim();
+    const age = ageInput.value.trim();
+    const sexe = sexeInput.value;
+    const pays = paysInput.value.trim();
 
-function startPublicChat() {
-  publicChannel = supabaseClient.channel(
-    "oceanchat-public"
-  );
-
-  publicChannel.on(
-    "broadcast",
-    {
-      event: "public-message"
-    },
-    function (payload) {
-      const data = payload.payload;
-
-      if (!data) return;
-
-      addPublicMessage(
-        data.pseudo,
-        data.text,
-        data.userId === currentUser.id
-      );
+    if (!pseudo || !age || !sexe || !pays) {
+      alert("Remplis tous les champs.");
+      return;
     }
-  );
 
-  publicChannel.subscribe();
-}
+    currentUser.pseudo = pseudo;
+    currentUser.age = age;
+    currentUser.sexe = sexe;
+    currentUser.pays = pays;
 
-// ===============================
-// ENVOYER MESSAGE PUBLIC
-// ===============================
+    console.log("Utilisateur connecté :", currentUser);
 
-messageForm.addEventListener("submit", async function (event) {
-  event.preventDefault();
+    // Cacher connexion
+    loginSection.style.display = "none";
 
-  const text = messageInput.value.trim();
+    // Afficher chat
+    chatSection.style.display = "flex";
 
-  if (!text) return;
+    // Démarrer les services
+    await startPresence();
+    startPublicChat();
+    startPrivateChat();
 
-  messageInput.value = "";
-
-  await publicChannel.send({
-    type: "broadcast",
-    event: "public-message",
-    payload: {
-      userId: currentUser.id,
-      pseudo: currentUser.pseudo,
-      text: text,
-      timestamp: Date.now()
-    }
-  });
-});
-
-// ===============================
-// AFFICHER MESSAGE PUBLIC
-// ===============================
-
-function addPublicMessage(pseudo, text, ownMessage) {
-  const div = document.createElement("div");
-
-  div.className =
-    ownMessage
-      ? "message own-message"
-      : "message";
-
-  const name = document.createElement("strong");
-  name.textContent = pseudo + " : ";
-
-  const content = document.createElement("span");
-  content.textContent = text;
-
-  div.appendChild(name);
-  div.appendChild(content);
-
-  messages.appendChild(div);
-
-  messages.scrollTop = messages.scrollHeight;
-}
-
-// ===============================
-// MESSAGE SYSTEME
-// ===============================
-
-function addSystemMessage(text) {
-  const div = document.createElement("div");
-
-  div.className = "system-message";
-
-  div.textContent = text;
-
-  messages.appendChild(div);
-
-  messages.scrollTop = messages.scrollHeight;
-}
-
-// ===============================
-// CHAT PRIVE
-// ===============================
-
-function startPrivateChat() {
-  privateChannel = supabaseClient.channel(
-    "oceanchat-private-messages"
-  );
-
-  privateChannel.on(
-    "broadcast",
-    {
-      event: "private-message"
-    },
-    function (payload) {
-      const data = payload.payload;
-
-      if (!data) return;
-
-      // Ignorer les messages qui ne nous concernent pas
-      if (
-        data.receiverId !== currentUser.id &&
-        data.senderId !== currentUser.id
-      ) {
-        return;
-      }
-
-      // Si le message vient d'un autre utilisateur
-      if (data.receiverId === currentUser.id) {
-        const otherUser = {
-          id: data.senderId,
-          pseudo: data.senderPseudo,
-          age: data.senderAge,
-          sexe: data.senderSexe,
-          pays: data.senderPays
-        };
-
-        savePrivateMessage(
-          data.conversationId,
-          data,
-          otherUser
-        );
-
-        openPrivateConversation(
-          otherUser,
-          false
-        );
-      }
-    }
-  );
-
-  privateChannel.subscribe();
-}
-
-// ===============================
-// ID CONVERSATION
-// ===============================
-
-function getConversationId(userId1, userId2) {
-  return [userId1, userId2]
-    .sort()
-    .join("_");
-}
-
-// ===============================
-// OUVRIR CONVERSATION
-// ===============================
-
-function openPrivateConversation(user, clearExisting = false) {
-  if (!user || !user.id) return;
-
-  const conversationId = getConversationId(
-    currentUser.id,
-    user.id
-  );
-
-  if (!privateConversations.has(conversationId)) {
-    privateConversations.set(conversationId, {
-      user: user,
-      messages: []
-    });
-  }
-
-  privateConversations.get(conversationId).user = user;
-
-  activeConversationId = conversationId;
-
-  privateTitle.textContent =
-    `💬 ${user.pseudo}`;
-
-  renderPrivateMessages();
-
-  privateModal.style.display = "flex";
-
-  privateChatsBar.style.display = "flex";
-
-  renderPrivateChatsBar();
-
-  setTimeout(function () {
-    privateMessageInput.focus();
-  }, 100);
-}
-
-// ===============================
-// AFFICHER MESSAGES PRIVES
-// ===============================
-
-function renderPrivateMessages() {
-  privateMessages.innerHTML = "";
-
-  if (!activeConversationId) return;
-
-  const conversation =
-    privateConversations.get(activeConversationId);
-
-  if (!conversation) return;
-
-  conversation.messages.forEach(function (message) {
-    addPrivateMessageToScreen(
-      message,
-      message.senderId === currentUser.id
+    addSystemMessage(
+      `Bienvenue ${currentUser.pseudo} 👋`
     );
   });
 
-  privateMessages.scrollTop =
-    privateMessages.scrollHeight;
-}
+  // =========================
+  // PRESENCE
+  // =========================
 
-// ===============================
-// AFFICHER UN MESSAGE PRIVE
-// ===============================
+  async function startPresence() {
 
-function addPrivateMessageToScreen(message, own) {
-  const div = document.createElement("div");
+    try {
 
-  div.className =
-    own
-      ? "private-message own-private-message"
-      : "private-message";
+      presenceChannel = supabaseClient.channel(
+        "oceanchat-online-users",
+        {
+          config: {
+            presence: {
+              key: currentUser.id
+            }
+          }
+        }
+      );
 
-  const name = document.createElement("strong");
+      presenceChannel.on(
+        "presence",
+        { event: "sync" },
+        () => {
+          updateOnlineUsers();
+        }
+      );
 
-  name.textContent =
-    own
-      ? "Moi : "
-      : `${message.senderPseudo || "Utilisateur"} : `;
+      presenceChannel.on(
+        "presence",
+        { event: "join" },
+        () => {
+          updateOnlineUsers();
+        }
+      );
 
-  const text = document.createElement("span");
+      presenceChannel.on(
+        "presence",
+        { event: "leave" },
+        () => {
+          updateOnlineUsers();
+        }
+      );
 
-  text.textContent = message.text;
+      await presenceChannel.subscribe(async (status) => {
 
-  div.appendChild(name);
-  div.appendChild(text);
+        console.log("Presence :", status);
 
-  privateMessages.appendChild(div);
-}
+        if (status === "SUBSCRIBED") {
 
-// ===============================
-// SAUVEGARDER MESSAGE EN MEMOIRE
-// ===============================
+          await presenceChannel.track({
+            id: currentUser.id,
+            pseudo: currentUser.pseudo,
+            age: currentUser.age,
+            sexe: currentUser.sexe,
+            pays: currentUser.pays
+          });
 
-function savePrivateMessage(
-  conversationId,
-  message,
-  user
-) {
-  if (!privateConversations.has(conversationId)) {
-    privateConversations.set(conversationId, {
-      user: user,
-      messages: []
+          updateOnlineUsers();
+        }
+      });
+
+    } catch (error) {
+      console.error("Erreur présence :", error);
+    }
+  }
+
+  // =========================
+  // UTILISATEURS EN LIGNE
+  // =========================
+
+  function updateOnlineUsers() {
+
+    if (!presenceChannel) return;
+
+    const state = presenceChannel.presenceState();
+
+    onlineUsers.clear();
+
+    Object.keys(state).forEach((key) => {
+
+      const list = state[key];
+
+      if (!list || list.length === 0) return;
+
+      const user = list[list.length - 1];
+
+      if (
+        user.id &&
+        user.id !== currentUser.id
+      ) {
+        onlineUsers.set(user.id, user);
+      }
+    });
+
+    renderOnlineUsers();
+  }
+
+  function renderOnlineUsers() {
+
+    usersList.innerHTML = "";
+
+    onlineCount.textContent =
+      onlineUsers.size;
+
+    if (onlineUsers.size === 0) {
+
+      const empty = document.createElement("div");
+
+      empty.textContent =
+        "Aucun autre utilisateur en ligne.";
+
+      usersList.appendChild(empty);
+
+      return;
+    }
+
+    onlineUsers.forEach((user) => {
+
+      const button =
+        document.createElement("button");
+
+      button.type = "button";
+      button.className = "online-user";
+
+      const name =
+        document.createElement("strong");
+
+      name.textContent =
+        user.pseudo || "Utilisateur";
+
+      const info =
+        document.createElement("span");
+
+      info.textContent =
+        `${user.age || ""} ans • ${user.sexe || ""} • ${user.pays || ""}`;
+
+      button.appendChild(name);
+      button.appendChild(info);
+
+      button.addEventListener("click", () => {
+        openPrivateConversation(user);
+      });
+
+      usersList.appendChild(button);
     });
   }
 
-  const conversation =
-    privateConversations.get(conversationId);
+  // =========================
+  // CHAT PUBLIC
+  // =========================
 
-  conversation.user = user;
+  function startPublicChat() {
 
-  conversation.messages.push(message);
-}
+    publicChannel =
+      supabaseClient.channel(
+        "oceanchat-public"
+      );
 
-// ===============================
-// ENVOYER MESSAGE PRIVE
-// ===============================
+    publicChannel.on(
+      "broadcast",
+      { event: "public-message" },
+      (payload) => {
 
-privateMessageForm.addEventListener(
-  "submit",
-  async function (event) {
-    event.preventDefault();
+        const data = payload.payload;
 
-    const text =
-      privateMessageInput.value.trim();
+        if (!data) return;
 
-    if (!text) return;
+        addPublicMessage(
+          data.pseudo,
+          data.text,
+          data.userId === currentUser.id
+        );
+      }
+    );
+
+    publicChannel.subscribe((status) => {
+      console.log("Chat public :", status);
+    });
+  }
+
+  // =========================
+  // ENVOYER MESSAGE PUBLIC
+  // =========================
+
+  messageForm.addEventListener(
+    "submit",
+    async (event) => {
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const text =
+        messageInput.value.trim();
+
+      if (!text) return;
+
+      messageInput.value = "";
+
+      if (!publicChannel) return;
+
+      await publicChannel.send({
+        type: "broadcast",
+        event: "public-message",
+        payload: {
+          userId: currentUser.id,
+          pseudo: currentUser.pseudo,
+          text: text,
+          timestamp: Date.now()
+        }
+      });
+    }
+  );
+
+  // =========================
+  // MESSAGE PUBLIC
+  // =========================
+
+  function addPublicMessage(
+    pseudo,
+    text,
+    own
+  ) {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      own
+        ? "message own-message"
+        : "message";
+
+    const name =
+      document.createElement("strong");
+
+    name.textContent =
+      `${pseudo} : `;
+
+    const content =
+      document.createElement("span");
+
+    content.textContent = text;
+
+    div.appendChild(name);
+    div.appendChild(content);
+
+    messages.appendChild(div);
+
+    messages.scrollTop =
+      messages.scrollHeight;
+  }
+
+  // =========================
+  // MESSAGE SYSTEME
+  // =========================
+
+  function addSystemMessage(text) {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "system-message";
+
+    div.textContent = text;
+
+    messages.appendChild(div);
+
+    messages.scrollTop =
+      messages.scrollHeight;
+  }
+
+  // =========================
+  // CHAT PRIVE
+  // =========================
+
+  function startPrivateChat() {
+
+    privateChannel =
+      supabaseClient.channel(
+        "oceanchat-private"
+      );
+
+    privateChannel.on(
+      "broadcast",
+      { event: "private-message" },
+      (payload) => {
+
+        const data = payload.payload;
+
+        if (!data) return;
+
+        // Message reçu
+        if (
+          data.receiverId === currentUser.id
+        ) {
+
+          const user = {
+            id: data.senderId,
+            pseudo: data.senderPseudo,
+            age: data.senderAge,
+            sexe: data.senderSexe,
+            pays: data.senderPays
+          };
+
+          savePrivateMessage(
+            data.conversationId,
+            data,
+            user
+          );
+
+          openPrivateConversation(
+            user
+          );
+        }
+      }
+    );
+
+    privateChannel.subscribe((status) => {
+      console.log("Chat privé :", status);
+    });
+  }
+
+  // =========================
+  // ID CONVERSATION
+  // =========================
+
+  function getConversationId(
+    id1,
+    id2
+  ) {
+
+    return [id1, id2]
+      .sort()
+      .join("_");
+  }
+
+  // =========================
+  // OUVRIR CHAT PRIVE
+  // =========================
+
+  function openPrivateConversation(user) {
+
+    if (!user || !user.id) return;
+
+    const conversationId =
+      getConversationId(
+        currentUser.id,
+        user.id
+      );
+
+    if (
+      !privateConversations.has(
+        conversationId
+      )
+    ) {
+
+      privateConversations.set(
+        conversationId,
+        {
+          user: user,
+          messages: []
+        }
+      );
+    }
+
+    privateConversations.get(
+      conversationId
+    ).user = user;
+
+    activeConversationId =
+      conversationId;
+
+    privateTitle.textContent =
+      `💬 ${user.pseudo}`;
+
+    renderPrivateMessages();
+
+    privateModal.style.display =
+      "flex";
+
+    privateChatsBar.style.display =
+      "flex";
+
+    renderPrivateChatsBar();
+
+    setTimeout(() => {
+      privateMessageInput.focus();
+    }, 100);
+  }
+
+  // =========================
+  // AFFICHER MESSAGES PRIVES
+  // =========================
+
+  function renderPrivateMessages() {
+
+    privateMessages.innerHTML = "";
 
     if (!activeConversationId) return;
 
@@ -552,188 +543,316 @@ privateMessageForm.addEventListener(
 
     if (!conversation) return;
 
-    const receiver = conversation.user;
+    conversation.messages.forEach(
+      (message) => {
 
-    const message = {
-      conversationId: activeConversationId,
-
-      senderId: currentUser.id,
-      senderPseudo: currentUser.pseudo,
-      senderAge: currentUser.age,
-      senderSexe: currentUser.sexe,
-      senderPays: currentUser.pays,
-
-      receiverId: receiver.id,
-
-      text: text,
-
-      timestamp: Date.now()
-    };
-
-    // Vider immédiatement le champ
-    privateMessageInput.value = "";
-
-    // Ajouter notre message localement
-    savePrivateMessage(
-      activeConversationId,
-      message,
-      receiver
+        addPrivateMessageToScreen(
+          message,
+          message.senderId ===
+            currentUser.id
+        );
+      }
     );
 
-    renderPrivateMessages();
-
-    // Envoyer à l'autre utilisateur
-    await privateChannel.send({
-      type: "broadcast",
-      event: "private-message",
-      payload: message
-    });
-
-    privateMessageInput.focus();
-  }
-);
-
-// ===============================
-// BARRE DES CONVERSATIONS REDUITES
-// ===============================
-
-function renderPrivateChatsBar() {
-  privateChatsBar.innerHTML = "";
-
-  if (privateConversations.size === 0) {
-    privateChatsBar.style.display = "none";
-    return;
+    privateMessages.scrollTop =
+      privateMessages.scrollHeight;
   }
 
-  privateChatsBar.style.display = "flex";
+  function addPrivateMessageToScreen(
+    message,
+    own
+  ) {
 
-  privateConversations.forEach(
-    function (conversation, conversationId) {
-      const button = document.createElement("button");
+    const div =
+      document.createElement("div");
 
-      button.type = "button";
+    div.className =
+      own
+        ? "private-message own-private-message"
+        : "private-message";
 
-      button.className =
-        "minimized-private-chat";
+    const name =
+      document.createElement("strong");
 
-      if (
-        conversationId === activeConversationId &&
-        privateModal.style.display === "none"
-      ) {
-        button.classList.add("active");
-      }
+    name.textContent =
+      own
+        ? "Moi : "
+        : `${message.senderPseudo} : `;
 
-      button.textContent =
-        `💬 ${conversation.user.pseudo}`;
+    const text =
+      document.createElement("span");
 
-      button.addEventListener(
-        "click",
-        function () {
-          activeConversationId =
-            conversationId;
+    text.textContent =
+      message.text;
 
-          privateTitle.textContent =
-            `💬 ${conversation.user.pseudo}`;
+    div.appendChild(name);
+    div.appendChild(text);
 
-          renderPrivateMessages();
+    privateMessages.appendChild(div);
+  }
 
-          privateModal.style.display =
-            "flex";
+  // =========================
+  // SAUVER MESSAGE
+  // =========================
 
-          renderPrivateChatsBar();
+  function savePrivateMessage(
+    conversationId,
+    message,
+    user
+  ) {
 
-          setTimeout(function () {
-            privateMessageInput.focus();
-          }, 100);
+    if (
+      !privateConversations.has(
+        conversationId
+      )
+    ) {
+
+      privateConversations.set(
+        conversationId,
+        {
+          user: user,
+          messages: []
         }
       );
-
-      privateChatsBar.appendChild(button);
     }
-  );
-}
 
-// ===============================
-// REDUIRE FENETRE PRIVEE
-// ===============================
-
-minimizePrivate.addEventListener(
-  "click",
-  function () {
-    privateModal.style.display = "none";
-
-    renderPrivateChatsBar();
-  }
-);
-
-// ===============================
-// FERMER CONVERSATION
-// ===============================
-
-closePrivate.addEventListener(
-  "click",
-  function () {
-    if (activeConversationId) {
-      privateConversations.delete(
-        activeConversationId
+    const conversation =
+      privateConversations.get(
+        conversationId
       );
-    }
 
-    activeConversationId = null;
+    conversation.user = user;
 
-    privateModal.style.display = "none";
-
-    renderPrivateChatsBar();
+    conversation.messages.push(
+      message
+    );
   }
-);
 
-// ===============================
-// DECONNEXION
-// ===============================
+  // =========================
+  // ENVOYER MESSAGE PRIVE
+  // =========================
 
-logoutBtn.addEventListener(
-  "click",
-  async function () {
-    try {
-      if (presenceChannel) {
-        await presenceChannel.untrack();
-        await supabaseClient.removeChannel(
-          presenceChannel
-        );
+  privateMessageForm.addEventListener(
+    "submit",
+    async (event) => {
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const text =
+        privateMessageInput.value.trim();
+
+      if (!text) return;
+
+      if (!activeConversationId) {
+        alert("Choisis d'abord un utilisateur.");
+        return;
       }
 
-      if (publicChannel) {
-        await supabaseClient.removeChannel(
-          publicChannel
+      const conversation =
+        privateConversations.get(
+          activeConversationId
         );
-      }
+
+      if (!conversation) return;
+
+      const receiver =
+        conversation.user;
+
+      const message = {
+
+        conversationId:
+          activeConversationId,
+
+        senderId:
+          currentUser.id,
+
+        senderPseudo:
+          currentUser.pseudo,
+
+        senderAge:
+          currentUser.age,
+
+        senderSexe:
+          currentUser.sexe,
+
+        senderPays:
+          currentUser.pays,
+
+        receiverId:
+          receiver.id,
+
+        text:
+          text,
+
+        timestamp:
+          Date.now()
+      };
+
+      privateMessageInput.value = "";
+
+      savePrivateMessage(
+        activeConversationId,
+        message,
+        receiver
+      );
+
+      renderPrivateMessages();
 
       if (privateChannel) {
-        await supabaseClient.removeChannel(
-          privateChannel
+
+        await privateChannel.send({
+
+          type: "broadcast",
+
+          event: "private-message",
+
+          payload: message
+        });
+      }
+
+      privateMessageInput.focus();
+    }
+  );
+
+  // =========================
+  // REDUIRE
+  // =========================
+
+  minimizePrivate.addEventListener(
+    "click",
+    () => {
+
+      privateModal.style.display =
+        "none";
+
+      renderPrivateChatsBar();
+    }
+  );
+
+  // =========================
+  // FERMER
+  // =========================
+
+  closePrivate.addEventListener(
+    "click",
+    () => {
+
+      if (activeConversationId) {
+
+        privateConversations.delete(
+          activeConversationId
         );
       }
-    } catch (error) {
-      console.error(error);
+
+      activeConversationId = null;
+
+      privateModal.style.display =
+        "none";
+
+      renderPrivateChatsBar();
+    }
+  );
+
+  // =========================
+  // BARRE CHATS REDUITS
+  // =========================
+
+  function renderPrivateChatsBar() {
+
+    privateChatsBar.innerHTML = "";
+
+    if (
+      privateConversations.size === 0
+    ) {
+
+      privateChatsBar.style.display =
+        "none";
+
+      return;
     }
 
-    window.location.reload();
-  }
-);
+    privateChatsBar.style.display =
+      "flex";
 
-// ===============================
-// SECURITE
-// ===============================
+    privateConversations.forEach(
+      (conversation, id) => {
 
-window.addEventListener(
-  "beforeunload",
-  function () {
-    try {
-      if (presenceChannel) {
-        presenceChannel.untrack();
+        const button =
+          document.createElement("button");
+
+        button.type = "button";
+
+        button.className =
+          "minimized-private-chat";
+
+        button.textContent =
+          `💬 ${conversation.user.pseudo}`;
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            activeConversationId =
+              id;
+
+            privateTitle.textContent =
+              `💬 ${conversation.user.pseudo}`;
+
+            renderPrivateMessages();
+
+            privateModal.style.display =
+              "flex";
+
+            renderPrivateChatsBar();
+
+            privateMessageInput.focus();
+          }
+        );
+
+        privateChatsBar.appendChild(
+          button
+        );
       }
-    } catch (error) {
-      console.error(error);
-    }
+    );
   }
-);
+
+  // =========================
+  // DECONNEXION
+  // =========================
+
+  logoutBtn.addEventListener(
+    "click",
+    async () => {
+
+      try {
+
+        if (presenceChannel) {
+          await presenceChannel.untrack();
+          await supabaseClient.removeChannel(
+            presenceChannel
+          );
+        }
+
+        if (publicChannel) {
+          await supabaseClient.removeChannel(
+            publicChannel
+          );
+        }
+
+        if (privateChannel) {
+          await supabaseClient.removeChannel(
+            privateChannel
+          );
+        }
+
+      } catch (error) {
+
+        console.error(error);
+      }
+
+      location.reload();
+    }
+  );
+
+});
