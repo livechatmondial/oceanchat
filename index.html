@@ -1,308 +1,355 @@
-```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
 
-    <title>OceanChat</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-    <link rel="stylesheet" href="./style.css?v=20260906">
+  <meta
+    name="description"
+    content="OceanChat - Chat en ligne et rencontres"
+  >
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
+  <title>🌊 OceanChat</title>
+
+  <!-- CSS -->
+  <link
+    rel="stylesheet"
+    href="./style.css?v=20260906"
+  >
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Configuration Supabase -->
+  <script src="./supabase-config.js"></script>
 </head>
 
 <body>
 
-<!-- ==============================
-     CONNEXION
-     ============================== -->
+  <!-- =========================================
+       CONNEXION
+  ========================================== -->
 
-<section id="loginSection">
+  <section id="loginSection">
 
-    <div class="login-card">
+    <div class="login-box">
 
-        <h1>🌊 OceanChat</h1>
+      <h1>🌊 OceanChat</h1>
 
-        <p class="subtitle">
-            Rencontrez de nouvelles personnes et discutez en ligne.
-        </p>
+      <p>
+        Rencontre de nouvelles personnes et discute en ligne.
+      </p>
 
-        <form id="profileForm">
+      <form id="profileForm">
 
-            <div class="form-group">
-                <label for="pseudo">Pseudo</label>
-                <input
-                    id="pseudo"
-                    type="text"
-                    placeholder="Votre pseudo"
-                    maxlength="30"
-                    required
-                >
-            </div>
+        <label for="pseudo">
+          Pseudo
+        </label>
 
-            <div class="form-group">
-                <label for="age">Âge</label>
-                <input
-                    id="age"
-                    type="number"
-                    min="18"
-                    max="120"
-                    placeholder="Votre âge"
-                    required
-                >
-            </div>
+        <input
+          type="text"
+          id="pseudo"
+          name="pseudo"
+          placeholder="Ton pseudo"
+          maxlength="30"
+          autocomplete="nickname"
+          required
+        >
 
-            <div class="form-group">
-                <label for="sexe">Sexe</label>
-                <select id="sexe" required>
-                    <option value="">Choisir</option>
-                    <option value="Homme">Homme</option>
-                    <option value="Femme">Femme</option>
-                    <option value="Autre">Autre</option>
-                </select>
-            </div>
+        <label for="age">
+          Âge
+        </label>
 
-            <div class="form-group">
-                <label for="pays">Pays</label>
-                <select id="pays" required>
-                    <option value="">Choisir votre pays</option>
-                    <option value="Canada">🇨🇦 Canada</option>
-                    <option value="France">🇫🇷 France</option>
-                    <option value="Belgique">🇧🇪 Belgique</option>
-                    <option value="Suisse">🇨🇭 Suisse</option>
-                    <option value="Maroc">🇲🇦 Maroc</option>
-                    <option value="Algérie">🇩🇿 Algérie</option>
-                    <option value="Tunisie">🇹🇳 Tunisie</option>
-                    <option value="Sénégal">🇸🇳 Sénégal</option>
-                    <option value="Côte d'Ivoire">🇨🇮 Côte d'Ivoire</option>
-                    <option value="États-Unis">🇺🇸 États-Unis</option>
-                    <option value="Autre">🌎 Autre</option>
-                </select>
-            </div>
+        <input
+          type="number"
+          id="age"
+          name="age"
+          placeholder="Ton âge"
+          min="18"
+          max="100"
+          required
+        >
 
-            <button
-                type="submit"
-                class="btn-connect"
-            >
-                🌊 Connecter
-            </button>
+        <label for="sexe">
+          Sexe
+        </label>
 
-        </form>
+        <select
+          id="sexe"
+          name="sexe"
+          required
+        >
+          <option value="">
+            Choisir
+          </option>
 
-        <div class="signup-footer">
-            Nouveau sur OceanChat ?
-            <a href="inscription.html">Créer un compte</a>
-        </div>
+          <option value="Homme">
+            Homme
+          </option>
+
+          <option value="Femme">
+            Femme
+          </option>
+
+          <option value="Autre">
+            Autre
+          </option>
+        </select>
+
+        <label for="pays">
+          Pays
+        </label>
+
+        <input
+          type="text"
+          id="pays"
+          name="pays"
+          placeholder="Ton pays"
+          maxlength="50"
+          autocomplete="country-name"
+          required
+        >
+
+        <button
+          type="submit"
+          id="connectBtn"
+        >
+          🚀 Connecter
+        </button>
+
+      </form>
 
     </div>
 
-</section>
+  </section>
 
 
-<!-- ==============================
-     APPLICATION
-     ============================== -->
+  <!-- =========================================
+       APPLICATION CHAT
+  ========================================== -->
 
-<section id="chatSection" style="display:none;">
+  <section
+    id="chatSection"
+    style="display: none;"
+  >
 
-    <!-- HEADER -->
+    <!-- =====================================
+         HEADER
+    ====================================== -->
 
     <header class="chat-header">
 
-        <div class="brand">
-            <h1>🌊 OceanChat</h1>
-        </div>
+      <h1>
+        🌊 OceanChat
+      </h1>
 
-        <div class="header-user">
+      <div class="online-status">
 
-            <span class="online-indicator"></span>
+        <span class="online-dot"></span>
 
-            <span>
-                <strong id="onlineCount">0</strong>
-                en ligne
-            </span>
+        <span>
+          <span id="onlineCount">0</span>
+          en ligne
+        </span>
 
-            <button
-                id="logoutBtn"
-                class="btn-logout"
-                type="button"
-            >
-                Déconnexion
-            </button>
+      </div>
 
-        </div>
+      <button
+        type="button"
+        id="logoutBtn"
+      >
+        Déconnexion
+      </button>
 
     </header>
 
 
-    <!-- ==========================
-         CONTENU
-         ========================== -->
+    <!-- =====================================
+         CONTENU PRINCIPAL
+    ====================================== -->
 
     <div class="chat-layout">
 
 
-        <!-- ========================
-             UTILISATEURS À GAUCHE
-             ======================== -->
+      <!-- ===================================
+           LISTE DES UTILISATEURS
+      ==================================== -->
 
-        <aside class="users-sidebar">
+      <aside class="users-sidebar">
 
-            <div class="users-title">
+        <h2>
+          👥 Utilisateurs
+        </h2>
 
-                <h2>👥 Utilisateurs</h2>
+        <div id="usersList">
 
-                <p>
-                    Cliquez sur une personne
-                    pour discuter en privé.
-                </p>
+          <div class="empty-users">
+            Aucun autre utilisateur en ligne.
+          </div>
 
-            </div>
+        </div>
 
-            <div id="usersList"></div>
-
-        </aside>
-
-
-        <!-- ========================
-             SALON PRINCIPAL
-             ======================== -->
-
-        <main class="public-chat">
-
-            <div class="chat-title">
-
-                <h2>💬 Salon principal</h2>
-
-                <span>
-                    Discutez avec tout le monde
-                </span>
-
-            </div>
+      </aside>
 
 
-            <!-- MESSAGES PUBLICS -->
+      <!-- ===================================
+           SALON PUBLIC
+      ==================================== -->
 
-            <div id="messages"></div>
+      <main class="public-chat">
 
+        <div class="public-chat-header">
 
-            <!-- ENVOI PUBLIC -->
-
-            <form
-                id="messageForm"
-                class="message-form"
-            >
-
-                <input
-                    id="messageInput"
-                    type="text"
-                    placeholder="Écrire un message..."
-                    autocomplete="off"
-                >
-
-                <button
-                    id="sendMessage"
-                    type="submit"
-                >
-                    Envoyer
-                </button>
-
-            </form>
-
-        </main>
-
-    </div>
-
-
-    <!-- ==============================
-         FENÊTRE PRIVÉE
-         ============================== -->
-
-    <div
-        id="privateModal"
-        class="private-window"
-    >
-
-        <div class="private-header">
-
-            <div class="private-user-title">
-
-                <span class="private-online-dot"></span>
-
-                <h3 id="privateTitle">
-                    Discussion privée
-                </h3>
-
-            </div>
-
-            <div class="private-controls">
-
-                <button
-                    id="minimizePrivate"
-                    type="button"
-                    title="Réduire"
-                >
-                    −
-                </button>
-
-                <button
-                    id="closePrivate"
-                    type="button"
-                    title="Fermer"
-                >
-                    ×
-                </button>
-
-            </div>
+          <h2>
+            💬 Salon principal
+          </h2>
 
         </div>
 
 
-        <!-- MESSAGES PRIVÉS -->
+        <!-- Messages publics -->
 
-        <div id="privateMessages"></div>
+        <div id="messages"></div>
 
 
-        <!-- ENVOI PRIVÉ -->
+        <!-- Formulaire public -->
 
         <form
-            id="privateMessageForm"
-            class="private-form"
+          id="messageForm"
+          class="message-form"
         >
 
-            <input
-                id="privateMessageInput"
-                type="text"
-                placeholder="Message privé..."
-                autocomplete="off"
-            >
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Écris ton message..."
+            autocomplete="off"
+            maxlength="1000"
+          >
 
-            <button
-                id="sendPrivateMessage"
-                type="submit"
-            >
-                Envoyer
-            </button>
+          <button
+            type="submit"
+            id="sendMessage"
+          >
+            Envoyer
+          </button>
 
         </form>
+
+      </main>
 
     </div>
 
 
-    <!-- BARRE DES CONVERSATIONS RÉDUITES -->
+    <!-- =====================================
+         FENÊTRE DE CHAT PRIVÉ
+    ====================================== -->
 
     <div
-        id="privateChatsBar"
-        class="private-chats-bar"
+      id="privateModal"
+      class="private-window"
+      style="display: none;"
+    >
+
+      <!-- En-tête privé -->
+
+      <div class="private-header">
+
+        <div id="privateTitle">
+          💬 Conversation privée
+        </div>
+
+        <div class="private-controls">
+
+          <button
+            type="button"
+            id="minimizePrivate"
+            aria-label="Réduire"
+            title="Réduire"
+          >
+            −
+          </button>
+
+          <button
+            type="button"
+            id="closePrivate"
+            aria-label="Fermer"
+            title="Fermer"
+          >
+            ×
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- Messages privés -->
+
+      <div id="privateMessages"></div>
+
+
+      <!-- Formulaire privé -->
+
+      <form
+        id="privateMessageForm"
+        class="private-form"
+      >
+
+        <input
+          type="text"
+          id="privateMessageInput"
+          placeholder="Message privé..."
+          autocomplete="off"
+          maxlength="1000"
+        >
+
+        <button
+          type="submit"
+          id="sendPrivateMessage"
+        >
+          Envoyer
+        </button>
+
+      </form>
+
+    </div>
+
+
+    <!-- =====================================
+         CHATS PRIVÉS RÉDUITS
+    ====================================== -->
+
+    <div
+      id="privateChatsBar"
+      aria-label="Conversations privées"
     ></div>
 
-</section>
+
+    <!-- =====================================
+         PIED DE PAGE
+    ====================================== -->
+
+    <footer style="display: none;">
+
+      <a href="./inscription.html">
+        Créer un compte
+      </a>
+
+    </footer>
+
+  </section>
 
 
-<script src="script.js"></script>
+  <!-- =========================================
+       SCRIPT OCEANCHAT
+  ========================================== -->
+
+  <script src="./script.js?v=20260906"></script>
 
 </body>
 </html>
-```
