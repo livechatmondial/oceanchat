@@ -1,6 +1,8 @@
 /* =========================================================
    🌊 OCEANCHAT
-   CHAT PUBLIC + CHAT PRIVÉ + APPELS AUDIO/VIDÉO
+   VERSION MOBILE
+   Chat public + privé + conversations réduites
+   Appels audio + vidéo
    ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -14,8 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
     !window.OCEANCHAT_SUPABASE_URL ||
     !window.OCEANCHAT_SUPABASE_KEY
   ) {
-    console.error("Configuration Supabase introuvable.");
     alert("Erreur de configuration Supabase.");
+    console.error("Configuration Supabase manquante.");
     return;
   }
 
@@ -28,67 +30,81 @@ document.addEventListener("DOMContentLoaded", () => {
      ELEMENTS
      ========================================================= */
 
-  const loginSection = document.getElementById("loginSection");
-  const chatSection = document.getElementById("chatSection");
+  const loginSection =
+    document.getElementById("loginSection");
 
-  const profileForm = document.getElementById("profileForm");
+  const chatSection =
+    document.getElementById("chatSection");
 
-  const pseudoInput = document.getElementById("pseudo");
-  const ageInput = document.getElementById("age");
-  const sexeInput = document.getElementById("sexe");
-  const paysInput = document.getElementById("pays");
+  const profileForm =
+    document.getElementById("profileForm");
 
-  const usersList = document.getElementById("usersList");
-  const onlineCount = document.getElementById("onlineCount");
+  const pseudoInput =
+    document.getElementById("pseudo");
 
-  const logoutBtn = document.getElementById("logoutBtn");
+  const ageInput =
+    document.getElementById("age");
 
-  const messages = document.getElementById("messages");
-  const messageForm = document.getElementById("messageForm");
-  const messageInput = document.getElementById("messageInput");
-  const sendMessageBtn = document.getElementById("sendMessage");
+  const sexeInput =
+    document.getElementById("sexe");
 
-  const privateModal = document.getElementById("privateModal");
-  const privateTitle = document.getElementById("privateTitle");
-  const minimizePrivate = document.getElementById("minimizePrivate");
-  const closePrivate = document.getElementById("closePrivate");
+  const paysInput =
+    document.getElementById("pays");
 
-  const privateMessages = document.getElementById("privateMessages");
+  const usersList =
+    document.getElementById("usersList");
+
+  const onlineCount =
+    document.getElementById("onlineCount");
+
+  const logoutBtn =
+    document.getElementById("logoutBtn");
+
+  const messages =
+    document.getElementById("messages");
+
+  const messageForm =
+    document.getElementById("messageForm");
+
+  const messageInput =
+    document.getElementById("messageInput");
+
+  const sendMessageBtn =
+    document.getElementById("sendMessage");
+
+  const privateModal =
+    document.getElementById("privateModal");
+
+  const privateTitle =
+    document.getElementById("privateTitle");
+
+  const minimizePrivate =
+    document.getElementById("minimizePrivate");
+
+  const closePrivate =
+    document.getElementById("closePrivate");
+
+  const privateMessages =
+    document.getElementById("privateMessages");
+
   const privateMessageForm =
     document.getElementById("privateMessageForm");
+
   const privateMessageInput =
     document.getElementById("privateMessageInput");
+
   const sendPrivateMessage =
     document.getElementById("sendPrivateMessage");
 
-  const privateChatsBar =
-    document.getElementById("privateChatsBar");
-
   /* =========================================================
-     UTILISATEUR
+     ETAT
      ========================================================= */
 
   let currentUser = null;
 
   let presenceChannel = null;
+
   let publicChannel = null;
-
-  /*
-    IMPORTANT :
-    Chaque utilisateur possède maintenant SON PROPRE
-    canal privé.
-
-    Exemple :
-
-    utilisateur A :
-    oceanchat-user-ID-A
-
-    utilisateur B :
-    oceanchat-user-ID-B
-
-    Quand A écrit à B, le message est envoyé
-    directement sur le canal de B.
-  */
 
   let personalChannel = null;
 
@@ -99,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let activePrivateUserId = null;
 
   /* =========================================================
-     APPEL
+     ETAT APPEL
      ========================================================= */
 
   let callState = {
@@ -121,17 +137,21 @@ document.addEventListener("DOMContentLoaded", () => {
      ========================================================= */
 
   function createId() {
+
     if (window.crypto?.randomUUID) {
       return crypto.randomUUID();
     }
 
     return (
       Date.now().toString(36) +
-      Math.random().toString(36).substring(2)
+      Math.random()
+        .toString(36)
+        .substring(2)
     );
   }
 
   function escapeHtml(value) {
+
     return String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -141,235 +161,553 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function scrollBottom(element) {
+
     if (element) {
-      element.scrollTop = element.scrollHeight;
+      element.scrollTop =
+        element.scrollHeight;
     }
   }
 
   /* =========================================================
-     INTERFACE APPEL
+     STYLE MOBILE + BARRE DISCUSSIONS REDUITES
      ========================================================= */
 
-  function createCallInterface() {
+  function installMobileStyles() {
 
-    if (!document.getElementById("oceanchat-call-style")) {
+    if (
+      document.getElementById(
+        "oceanchat-mobile-styles"
+      )
+    ) {
+      return;
+    }
 
-      const style = document.createElement("style");
+    const style =
+      document.createElement("style");
 
-      style.id = "oceanchat-call-style";
+    style.id =
+      "oceanchat-mobile-styles";
 
-      style.textContent = `
+    style.textContent = `
+
+      /* =========================================
+         BARRE DES DISCUSSIONS REDUITES
+         ========================================= */
+
+      #privateChatsBar {
+        position:relative !important;
+
+        width:100% !important;
+
+        min-height:0;
+
+        display:flex !important;
+
+        flex-direction:row !important;
+
+        align-items:center !important;
+
+        gap:8px !important;
+
+        padding:8px !important;
+
+        margin:0 !important;
+
+        overflow-x:auto !important;
+
+        overflow-y:hidden !important;
+
+        background:#f1f5f9 !important;
+
+        border-top:1px solid #d9e2ec !important;
+
+        border-bottom:1px solid #d9e2ec !important;
+
+        -webkit-overflow-scrolling:touch;
+
+        scrollbar-width:none;
+
+        z-index:20;
+      }
+
+      #privateChatsBar::-webkit-scrollbar {
+        display:none;
+      }
+
+      /* =========================================
+         BOUTON DISCUSSION REDUITE
+         ========================================= */
+
+      #privateChatsBar
+      .minimized-private-chat {
+
+        flex:0 0 auto !important;
+
+        min-width:120px !important;
+
+        max-width:180px !important;
+
+        height:44px !important;
+
+        padding:0 13px !important;
+
+        border:1px solid #cbd5e1 !important;
+
+        border-radius:22px !important;
+
+        background:white !important;
+
+        color:#0f172a !important;
+
+        font-size:14px !important;
+
+        font-weight:600 !important;
+
+        white-space:nowrap !important;
+
+        overflow:hidden !important;
+
+        text-overflow:ellipsis !important;
+
+        cursor:pointer !important;
+
+        box-shadow:0 2px 5px rgba(0,0,0,.08);
+
+        touch-action:manipulation;
+      }
+
+      #privateChatsBar
+      .minimized-private-chat:active {
+
+        transform:scale(.96);
+
+      }
+
+      /* =========================================
+         NOUVEAU MESSAGE
+         ========================================= */
+
+      #privateChatsBar
+      .minimized-private-chat.new-message {
+
+        background:#ff1f1f !important;
+
+        color:white !important;
+
+        border-color:#ff0000 !important;
+
+        animation:
+          oceanchatPrivateBlink
+          .7s infinite;
+      }
+
+      @keyframes oceanchatPrivateBlink {
+
+        0%,100% {
+          opacity:1;
+        }
+
+        50% {
+          opacity:.25;
+        }
+
+      }
+
+      /* =========================================
+         HEADER CHAT PRIVE
+         ========================================= */
+
+      .oceanchat-call-buttons {
+
+        display:flex;
+
+        align-items:center;
+
+        gap:5px;
+
+        margin-left:auto;
+
+        margin-right:5px;
+
+      }
+
+      .oceanchat-call-buttons button {
+
+        width:34px;
+
+        height:34px;
+
+        border:0;
+
+        border-radius:9px;
+
+        background:rgba(255,255,255,.18);
+
+        color:white;
+
+        font-size:17px;
+
+        cursor:pointer;
+
+        touch-action:manipulation;
+
+      }
+
+      /* =========================================
+         APPEL
+         ========================================= */
+
+      #oceanchatCallModal {
+
+        position:fixed;
+
+        inset:0;
+
+        z-index:99999;
+
+        display:none;
+
+        align-items:center;
+
+        justify-content:center;
+
+        background:rgba(0,0,0,.85);
+
+        padding:12px;
+
+      }
+
+      .oceanchat-call-box {
+
+        width:100%;
+
+        max-width:720px;
+
+        background:white;
+
+        border-radius:20px;
+
+        padding:18px;
+
+        text-align:center;
+
+        box-sizing:border-box;
+
+      }
+
+      .oceanchat-call-box h2 {
+
+        margin:0 0 8px;
+
+        color:#0077b6;
+
+        font-size:20px;
+
+      }
+
+      .oceanchat-call-box p {
+
+        color:#667085;
+
+        margin:0 0 15px;
+
+      }
+
+      #oceanchatIncomingButtons {
+
+        display:flex;
+
+        justify-content:center;
+
+        gap:10px;
+
+        margin-bottom:15px;
+
+      }
+
+      #oceanchatAcceptCall,
+      #oceanchatRejectCall,
+      #oceanchatHangup {
+
+        border:0;
+
+        border-radius:12px;
+
+        padding:13px 18px;
+
+        font-weight:bold;
+
+        font-size:15px;
+
+        cursor:pointer;
+
+        touch-action:manipulation;
+
+      }
+
+      #oceanchatAcceptCall {
+
+        background:#12b76a;
+
+        color:white;
+
+      }
+
+      #oceanchatRejectCall,
+      #oceanchatHangup {
+
+        background:#e53935;
+
+        color:white;
+
+      }
+
+      #oceanchatVideoContainer {
+
+        position:relative;
+
+        width:100%;
+
+        aspect-ratio:16/9;
+
+        background:#111;
+
+        border-radius:14px;
+
+        overflow:hidden;
+
+        margin-bottom:15px;
+
+      }
+
+      #oceanchatRemoteVideo {
+
+        width:100%;
+
+        height:100%;
+
+        object-fit:cover;
+
+      }
+
+      #oceanchatLocalVideo {
+
+        position:absolute;
+
+        right:10px;
+
+        bottom:10px;
+
+        width:28%;
+
+        max-width:170px;
+
+        border:2px solid white;
+
+        border-radius:10px;
+
+        background:#222;
+
+      }
+
+      #oceanchatHangup {
+
+        display:none;
+
+      }
+
+      .oceanchat-audio-icon {
+
+        font-size:65px;
+
+        padding:25px;
+
+      }
+
+      /* =========================================
+         TELEPHONE
+         ========================================= */
+
+      @media(max-width:600px) {
+
+        #privateChatsBar {
+
+          padding:7px !important;
+
+          gap:6px !important;
+
+        }
+
+        #privateChatsBar
+        .minimized-private-chat {
+
+          min-width:110px !important;
+
+          max-width:145px !important;
+
+          height:42px !important;
+
+          font-size:13px !important;
+
+          padding:0 11px !important;
+
+        }
 
         .oceanchat-call-buttons {
-          display:flex;
-          gap:5px;
-          margin-left:auto;
-          margin-right:5px;
+
+          gap:3px;
+
         }
 
         .oceanchat-call-buttons button {
-          width:34px;
-          height:34px;
-          border:0;
-          border-radius:8px;
-          background:rgba(255,255,255,.18);
-          color:white;
-          cursor:pointer;
-          font-size:17px;
-        }
 
-        .oceanchat-call-buttons button:hover {
-          background:rgba(255,255,255,.35);
-        }
+          width:31px;
 
-        .minimized-private-chat.new-message {
-          background:#ff0000 !important;
-          color:white !important;
-          animation:oceanchatBlink .7s infinite;
-        }
+          height:31px;
 
-        @keyframes oceanchatBlink {
-          0%,100% {
-            opacity:1;
-          }
+          font-size:15px;
 
-          50% {
-            opacity:.25;
-          }
-        }
-
-        #oceanchatCallModal {
-          position:fixed;
-          inset:0;
-          z-index:99999;
-          display:none;
-          align-items:center;
-          justify-content:center;
-          background:rgba(0,0,0,.82);
-          padding:15px;
         }
 
         .oceanchat-call-box {
-          width:100%;
-          max-width:720px;
-          background:white;
-          border-radius:20px;
-          padding:20px;
-          text-align:center;
+
+          padding:14px;
+
+          border-radius:16px;
+
         }
 
         .oceanchat-call-box h2 {
-          color:#0077b6;
-          margin-bottom:8px;
-        }
 
-        .oceanchat-call-box p {
-          color:#667085;
-          margin-bottom:15px;
-        }
+          font-size:18px;
 
-        #oceanchatIncomingButtons {
-          display:flex;
-          justify-content:center;
-          gap:12px;
-          margin-bottom:15px;
         }
 
         #oceanchatAcceptCall,
         #oceanchatRejectCall,
         #oceanchatHangup {
-          border:0;
-          border-radius:10px;
-          padding:12px 20px;
-          font-weight:bold;
-          cursor:pointer;
-          color:white;
-        }
 
-        #oceanchatAcceptCall {
-          background:#12b76a;
-        }
+          padding:12px 15px;
 
-        #oceanchatRejectCall,
-        #oceanchatHangup {
-          background:#e53935;
-        }
-
-        #oceanchatVideoContainer {
-          position:relative;
-          width:100%;
-          aspect-ratio:16/9;
-          background:#111;
-          border-radius:15px;
-          overflow:hidden;
-          margin-bottom:15px;
-        }
-
-        #oceanchatRemoteVideo {
-          width:100%;
-          height:100%;
-          object-fit:cover;
-        }
-
-        #oceanchatLocalVideo {
-          position:absolute;
-          right:12px;
-          bottom:12px;
-          width:25%;
-          max-width:180px;
-          border-radius:10px;
-          border:2px solid white;
-        }
-
-        #oceanchatHangup {
-          display:none;
-        }
-
-        .oceanchat-audio-icon {
-          font-size:70px;
-          margin:20px;
-        }
-
-        @media(max-width:600px) {
-
-          .oceanchat-call-buttons button {
-            width:30px;
-            height:30px;
-            font-size:15px;
-          }
-
-          .oceanchat-call-box {
-            padding:15px;
-          }
+          font-size:14px;
 
         }
-      `;
 
-      document.head.appendChild(style);
-    }
+      }
+
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  installMobileStyles();
+
+  /* =========================================================
+     CREER INTERFACE APPEL
+     ========================================================= */
+
+  function createCallInterface() {
+
+    const header =
+      privateModal?.querySelector(
+        ".private-header"
+      ) ||
+      privateModal?.querySelector(
+        ".private-window-header"
+      );
 
     /* ---------- BOUTONS ---------- */
 
-    const header =
-      privateModal?.querySelector(".private-header") ||
-      privateModal?.querySelector(".private-window-header");
-
     if (
       header &&
-      !document.getElementById("oceanchatCallButtons")
+      !document.getElementById(
+        "oceanchatCallButtons"
+      )
     ) {
 
-      const buttons = document.createElement("div");
+      const buttons =
+        document.createElement("div");
 
-      buttons.id = "oceanchatCallButtons";
+      buttons.id =
+        "oceanchatCallButtons";
 
       buttons.className =
         "oceanchat-call-buttons";
 
       buttons.innerHTML = `
+
         <button
           type="button"
           id="oceanchatVideoCallBtn"
           title="Appel vidéo"
-        >📹</button>
+        >
+          📹
+        </button>
 
         <button
           type="button"
           id="oceanchatAudioCallBtn"
           title="Appel vocal"
-        >🎤</button>
+        >
+          🎤
+        </button>
+
       `;
 
       const controls =
-        header.querySelector(".private-controls");
+        header.querySelector(
+          ".private-controls"
+        );
 
       if (controls) {
-        header.insertBefore(buttons, controls);
+
+        header.insertBefore(
+          buttons,
+          controls
+        );
+
       } else {
-        header.appendChild(buttons);
+
+        header.appendChild(
+          buttons
+        );
+
       }
     }
 
     /* ---------- MODAL ---------- */
 
-    if (!document.getElementById("oceanchatCallModal")) {
+    if (
+      !document.getElementById(
+        "oceanchatCallModal"
+      )
+    ) {
 
-      const modal = document.createElement("div");
+      const modal =
+        document.createElement("div");
 
-      modal.id = "oceanchatCallModal";
+      modal.id =
+        "oceanchatCallModal";
 
       modal.innerHTML = `
+
         <div class="oceanchat-call-box">
 
-          <h2 id="oceanchatCallTitle">
+          <h2
+            id="oceanchatCallTitle"
+          >
             Appel
           </h2>
 
-          <p id="oceanchatCallStatus">
+          <p
+            id="oceanchatCallStatus"
+          >
             Connexion...
           </p>
 
-          <div id="oceanchatIncomingButtons">
+          <div
+            id="oceanchatIncomingButtons"
+          >
 
             <button
               type="button"
@@ -387,7 +725,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
           </div>
 
-          <div id="oceanchatVideoContainer">
+          <div
+            id="oceanchatVideoContainer"
+          >
 
             <video
               id="oceanchatRemoteVideo"
@@ -420,22 +760,35 @@ document.addEventListener("DOMContentLoaded", () => {
           </button>
 
         </div>
+
       `;
 
-      document.body.appendChild(modal);
+      document.body.appendChild(
+        modal
+      );
     }
   }
 
   createCallInterface();
 
+  /* =========================================================
+     ELEMENTS APPEL
+     ========================================================= */
+
   const callModal =
-    document.getElementById("oceanchatCallModal");
+    document.getElementById(
+      "oceanchatCallModal"
+    );
 
   const callTitle =
-    document.getElementById("oceanchatCallTitle");
+    document.getElementById(
+      "oceanchatCallTitle"
+    );
 
   const callStatus =
-    document.getElementById("oceanchatCallStatus");
+    document.getElementById(
+      "oceanchatCallStatus"
+    );
 
   const incomingButtons =
     document.getElementById(
@@ -488,7 +841,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
   /* =========================================================
-     CONNEXION
+     CONNEXION UTILISATEUR
      ========================================================= */
 
   if (profileForm) {
@@ -498,6 +851,7 @@ document.addEventListener("DOMContentLoaded", () => {
       async (event) => {
 
         event.preventDefault();
+
         event.stopPropagation();
 
         const pseudo =
@@ -533,15 +887,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         currentUser = {
-          id: createId(),
+
+          id:createId(),
+
           pseudo,
+
           age,
+
           sexe,
+
           pays
+
         };
 
-        loginSection.style.display = "none";
-        chatSection.style.display = "block";
+        loginSection.style.display =
+          "none";
+
+        chatSection.style.display =
+          "block";
 
         await startRealtime();
 
@@ -559,14 +922,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     await startPublicChat();
 
-    /*
-      NOUVEAU :
-      Chaque utilisateur s'abonne à son propre canal.
-    */
-
     await startPersonalChannel();
 
     renderUsers();
+
   }
 
   /* =========================================================
@@ -579,9 +938,10 @@ document.addEventListener("DOMContentLoaded", () => {
       supabaseClient.channel(
         "oceanchat-online-users",
         {
-          config: {
-            presence: {
-              key: currentUser.id
+          config:{
+            presence:{
+              key:
+                currentUser.id
             }
           }
         }
@@ -590,7 +950,9 @@ document.addEventListener("DOMContentLoaded", () => {
     presenceChannel
       .on(
         "presence",
-        { event: "sync" },
+        {
+          event:"sync"
+        },
         () => {
 
           const state =
@@ -599,7 +961,7 @@ document.addEventListener("DOMContentLoaded", () => {
           onlineUsers.clear();
 
           Object.keys(state).forEach(
-            (key) => {
+            key => {
 
               const list =
                 state[key];
@@ -608,13 +970,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
               }
 
-              const user = list[0];
+              const user =
+                list[0];
 
               if (user?.id) {
+
                 onlineUsers.set(
                   user.id,
                   user
                 );
+
               }
 
             }
@@ -624,33 +989,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
         }
       )
-      .on(
-        "presence",
-        { event: "join" },
-        () => {
-          renderUsers();
-        }
-      )
-      .on(
-        "presence",
-        { event: "leave" },
-        () => {
-          renderUsers();
-        }
-      )
       .subscribe(
-        async (status) => {
+        async status => {
 
-          if (status === "SUBSCRIBED") {
+          if (
+            status ===
+            "SUBSCRIBED"
+          ) {
 
             await presenceChannel.track({
-              id: currentUser.id,
-              pseudo: currentUser.pseudo,
-              age: currentUser.age,
-              sexe: currentUser.sexe,
-              pays: currentUser.pays,
-              online_at:
-                new Date().toISOString()
+
+              id:
+                currentUser.id,
+
+              pseudo:
+                currentUser.pseudo,
+
+              age:
+                currentUser.age,
+
+              sexe:
+                currentUser.sexe,
+
+              pays:
+                currentUser.pays
+
             });
 
           }
@@ -665,75 +1028,102 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderUsers() {
 
-    if (!usersList) return;
+    if (!usersList) {
+      return;
+    }
 
     usersList.innerHTML = "";
 
     const users =
-      Array.from(onlineUsers.values())
-        .filter(
-          user =>
-            user.id !== currentUser?.id
-        )
-        .sort(
-          (a, b) =>
-            String(a.pseudo).localeCompare(
-              String(b.pseudo)
-            )
-        );
+      Array.from(
+        onlineUsers.values()
+      )
+      .filter(
+        user =>
+          user.id !==
+          currentUser?.id
+      );
 
     if (onlineCount) {
+
       onlineCount.textContent =
         onlineUsers.size;
+
     }
 
     if (!users.length) {
 
       const empty =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       empty.textContent =
         "Aucun autre utilisateur en ligne.";
 
-      usersList.appendChild(empty);
+      usersList.appendChild(
+        empty
+      );
 
       return;
     }
 
-    users.forEach((user) => {
+    users.forEach(user => {
 
       const button =
-        document.createElement("button");
+        document.createElement(
+          "button"
+        );
 
-      button.type = "button";
+      button.type =
+        "button";
 
       button.className =
         "online-user";
 
       button.innerHTML = `
-        <span class="online-dot"></span>
+
+        <span class="online-dot">
+        </span>
 
         <span class="online-user-info">
 
           <strong>
-            ${escapeHtml(user.pseudo)}
+            ${escapeHtml(
+              user.pseudo
+            )}
           </strong>
 
           <small>
-            ${escapeHtml(user.age)} ans •
-            ${escapeHtml(user.sexe)} •
-            ${escapeHtml(user.pays)}
+            ${escapeHtml(
+              user.age
+            )} ans •
+            ${escapeHtml(
+              user.sexe
+            )} •
+            ${escapeHtml(
+              user.pays
+            )}
           </small>
 
         </span>
+
       `;
 
       button.addEventListener(
         "click",
-        () => openPrivateChat(user)
+        () => {
+
+          openPrivateChat(
+            user
+          );
+
+        }
       );
 
-      usersList.appendChild(button);
+      usersList.appendChild(
+        button
+      );
 
     });
   }
@@ -752,11 +1142,18 @@ document.addEventListener("DOMContentLoaded", () => {
     publicChannel
       .on(
         "broadcast",
-        { event: "public-message" },
-        ({ payload }) => {
+        {
+          event:
+            "public-message"
+        },
+        ({payload}) => {
 
           if (payload) {
-            addPublicMessage(payload);
+
+            addPublicMessage(
+              payload
+            );
+
           }
 
         }
@@ -764,31 +1161,48 @@ document.addEventListener("DOMContentLoaded", () => {
       .subscribe();
   }
 
-  function addPublicMessage(payload) {
+  function addPublicMessage(
+    payload
+  ) {
 
-    if (!messages) return;
+    if (!messages) {
+      return;
+    }
 
     const div =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
     div.className =
-      payload.userId === currentUser.id
+      payload.userId ===
+      currentUser.id
         ? "message own-message"
         : "message";
 
     div.innerHTML = `
+
       <div class="message-author">
-        ${escapeHtml(payload.pseudo)}
+        ${escapeHtml(
+          payload.pseudo
+        )}
       </div>
 
       <div class="message-text">
-        ${escapeHtml(payload.text)}
+        ${escapeHtml(
+          payload.text
+        )}
       </div>
+
     `;
 
-    messages.appendChild(div);
+    messages.appendChild(
+      div
+    );
 
-    scrollBottom(messages);
+    scrollBottom(
+      messages
+    );
   }
 
   async function sendPublicMessage() {
@@ -796,33 +1210,52 @@ document.addEventListener("DOMContentLoaded", () => {
     const text =
       messageInput?.value.trim();
 
-    if (!text) return;
+    if (!text) {
+      return;
+    }
 
     messageInput.value = "";
 
     const payload = {
-      id: createId(),
-      userId: currentUser.id,
-      pseudo: currentUser.pseudo,
+
+      id:
+        createId(),
+
+      userId:
+        currentUser.id,
+
+      pseudo:
+        currentUser.pseudo,
+
       text,
+
       createdAt:
         new Date().toISOString()
+
     };
 
     await publicChannel.send({
-      type: "broadcast",
-      event: "public-message",
+
+      type:
+        "broadcast",
+
+      event:
+        "public-message",
+
       payload
+
     });
 
-    addPublicMessage(payload);
+    addPublicMessage(
+      payload
+    );
   }
 
   if (messageForm) {
 
     messageForm.addEventListener(
       "submit",
-      async (event) => {
+      async event => {
 
         event.preventDefault();
 
@@ -836,10 +1269,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     messageInput.addEventListener(
       "keydown",
-      async (event) => {
+      async event => {
 
         if (
-          event.key === "Enter" &&
+          event.key ===
+            "Enter" &&
           !event.shiftKey
         ) {
 
@@ -857,7 +1291,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sendMessageBtn.addEventListener(
       "click",
-      async (event) => {
+      async event => {
 
         event.preventDefault();
 
@@ -876,39 +1310,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const channelName =
       `oceanchat-user-${currentUser.id}`;
 
-    console.log(
-      "📡 Connexion canal privé :",
-      channelName
-    );
-
     personalChannel =
       supabaseClient.channel(
         channelName
       );
 
-    /*
-      MESSAGE PRIVÉ
-    */
+    /* MESSAGE */
 
     personalChannel.on(
       "broadcast",
-      { event: "private-message" },
-      ({ payload }) => {
+      {
+        event:
+          "private-message"
+      },
+      ({payload}) => {
 
         console.log(
-          "📩 MESSAGE PRIVÉ REÇU :",
+          "📩 Message reçu",
           payload
         );
 
-        if (!payload) return;
-
-        /*
-          Vérification supplémentaire :
-          le message doit être destiné à nous.
-        */
+        if (!payload) {
+          return;
+        }
 
         if (
-          payload.to !== currentUser.id
+          payload.to !==
+          currentUser.id
         ) {
           return;
         }
@@ -916,195 +1344,268 @@ document.addEventListener("DOMContentLoaded", () => {
         receivePrivateMessage(
           payload
         );
+
       }
     );
 
-    /*
-      APPEL
-    */
+    /* APPELS */
 
     personalChannel.on(
       "broadcast",
-      { event: "call-offer" },
-      ({ payload }) => {
-        receiveCallOffer(payload);
-      }
-    );
+      {
+        event:
+          "call-offer"
+      },
+      ({payload}) => {
 
-    personalChannel.on(
-      "broadcast",
-      { event: "call-answer" },
-      ({ payload }) => {
-        receiveCallAnswer(payload);
-      }
-    );
+        receiveCallOffer(
+          payload
+        );
 
-    personalChannel.on(
-      "broadcast",
-      { event: "ice-candidate" },
-      ({ payload }) => {
-        receiveIceCandidate(payload);
       }
     );
 
     personalChannel.on(
       "broadcast",
-      { event: "call-reject" },
-      ({ payload }) => {
-        receiveCallReject(payload);
+      {
+        event:
+          "call-answer"
+      },
+      ({payload}) => {
+
+        receiveCallAnswer(
+          payload
+        );
+
       }
     );
 
     personalChannel.on(
       "broadcast",
-      { event: "call-end" },
-      ({ payload }) => {
-        receiveCallEnd(payload);
+      {
+        event:
+          "ice-candidate"
+      },
+      ({payload}) => {
+
+        receiveIceCandidate(
+          payload
+        );
+
       }
     );
 
-    /*
-      IMPORTANT :
-      on attend que le canal soit réellement connecté.
-    */
+    personalChannel.on(
+      "broadcast",
+      {
+        event:
+          "call-reject"
+      },
+      ({payload}) => {
 
-    await new Promise((resolve) => {
+        receiveCallReject(
+          payload
+        );
 
-      personalChannel.subscribe(
-        (status) => {
+      }
+    );
 
-          console.log(
-            "Canal personnel :",
-            status
-          );
+    personalChannel.on(
+      "broadcast",
+      {
+        event:
+          "call-end"
+      },
+      ({payload}) => {
 
-          if (
-            status === "SUBSCRIBED"
-          ) {
+        receiveCallEnd(
+          payload
+        );
+
+      }
+    );
+
+    return new Promise(
+      resolve => {
+
+        personalChannel.subscribe(
+          status => {
 
             console.log(
-              "✅ Canal privé connecté"
+              "Canal personnel:",
+              status
             );
 
-            resolve();
-
-          }
-
-        }
-      );
-
-    });
-  }
-
-  /* =========================================================
-     ENVOYER MESSAGE PRIVE
-     ========================================================= */
-
-  async function sendPrivateMessageToUser(
-    targetUser,
-    text
-  ) {
-
-    if (!targetUser?.id) {
-      console.error(
-        "Destinataire introuvable"
-      );
-      return;
-    }
-
-    if (!text) return;
-
-    /*
-      LE MESSAGE EST ENVOYÉ SUR LE CANAL
-      PERSONNEL DU DESTINATAIRE.
-    */
-
-    const targetChannelName =
-      `oceanchat-user-${targetUser.id}`;
-
-    console.log(
-      "📤 Envoi message vers :",
-      targetChannelName
-    );
-
-    const targetChannel =
-      supabaseClient.channel(
-        targetChannelName
-      );
-
-    const status =
-      await new Promise((resolve) => {
-
-        targetChannel.subscribe(
-          (value) => {
-
             if (
-              value === "SUBSCRIBED"
+              status ===
+              "SUBSCRIBED"
             ) {
-              resolve(value);
+
+              console.log(
+                "✅ Canal personnel prêt"
+              );
+
+              resolve();
+
             }
 
           }
         );
 
-      });
-
-    if (status !== "SUBSCRIBED") {
-
-      console.error(
-        "Impossible de connecter le canal destinataire."
-      );
-
-      await supabaseClient.removeChannel(
-        targetChannel
-      );
-
-      return;
-    }
-
-    const payload = {
-      id: createId(),
-
-      from: currentUser.id,
-
-      to: targetUser.id,
-
-      pseudo: currentUser.pseudo,
-
-      text,
-
-      createdAt:
-        new Date().toISOString()
-    };
-
-    console.log(
-      "📤 MESSAGE ENVOYÉ :",
-      payload
+      }
     );
-
-    await targetChannel.send({
-      type: "broadcast",
-      event: "private-message",
-      payload
-    });
-
-    /*
-      On ferme le canal temporaire après l'envoi.
-    */
-
-    setTimeout(() => {
-
-      supabaseClient.removeChannel(
-        targetChannel
-      );
-
-    }, 1000);
-
-    return payload;
   }
 
   /* =========================================================
-     ENVOYER MESSAGE PRIVÉ DEPUIS FORMULAIRE
+     OUVRIR DISCUSSION
+     ========================================================= */
+
+  function openPrivateChat(
+    user
+  ) {
+
+    if (!user?.id) {
+      return;
+    }
+
+    activePrivateUserId =
+      user.id;
+
+    if (
+      !privateConversations.has(
+        user.id
+      )
+    ) {
+
+      privateConversations.set(
+        user.id,
+        {
+
+          user,
+
+          messages:[],
+
+          minimized:false,
+
+          unread:false
+
+        }
+      );
+
+    }
+
+    const conversation =
+      privateConversations.get(
+        user.id
+      );
+
+    conversation.user =
+      user;
+
+    conversation.minimized =
+      false;
+
+    conversation.unread =
+      false;
+
+    if (privateModal) {
+
+      privateModal.style.display =
+        "flex";
+
+    }
+
+    if (privateTitle) {
+
+      privateTitle.textContent =
+        user.pseudo;
+
+    }
+
+    renderPrivateMessages();
+
+    renderPrivateChatsBar();
+
+    setTimeout(
+      () => {
+
+        privateMessageInput?.focus();
+
+      },
+      100
+    );
+  }
+
+  /* =========================================================
+     AFFICHER MESSAGES PRIVES
+     ========================================================= */
+
+  function renderPrivateMessages() {
+
+    if (!privateMessages) {
+      return;
+    }
+
+    privateMessages.innerHTML =
+      "";
+
+    if (!activePrivateUserId) {
+      return;
+    }
+
+    const conversation =
+      privateConversations.get(
+        activePrivateUserId
+      );
+
+    if (!conversation) {
+      return;
+    }
+
+    conversation.messages.forEach(
+      msg => {
+
+        const div =
+          document.createElement(
+            "div"
+          );
+
+        div.className =
+          msg.from ===
+          currentUser.id
+            ? "message own-message"
+            : "message";
+
+        div.innerHTML = `
+
+          <div class="message-author">
+            ${escapeHtml(
+              msg.pseudo
+            )}
+          </div>
+
+          <div class="message-text">
+            ${escapeHtml(
+              msg.text
+            )}
+          </div>
+
+        `;
+
+        privateMessages.appendChild(
+          div
+        );
+
+      }
+    );
+
+    scrollBottom(
+      privateMessages
+    );
+  }
+
+  /* =========================================================
+     ENVOYER MESSAGE PRIVE
      ========================================================= */
 
   async function sendPrivate() {
@@ -1129,38 +1630,113 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    privateMessageInput.value = "";
+    privateMessageInput.value =
+      "";
 
-    const payload =
-      await sendPrivateMessageToUser(
-        conversation.user,
-        text
-      );
+    const targetUser =
+      conversation.user;
 
-    if (!payload) {
-      return;
-    }
+    const payload = {
+
+      id:
+        createId(),
+
+      from:
+        currentUser.id,
+
+      to:
+        targetUser.id,
+
+      pseudo:
+        currentUser.pseudo,
+
+      text,
+
+      createdAt:
+        new Date().toISOString()
+
+    };
 
     /*
-      Afficher immédiatement notre propre message.
+      Affichage immédiat chez l'expéditeur.
     */
 
     conversation.messages.push(
       payload
     );
 
-    conversation.unread = false;
+    conversation.unread =
+      false;
 
     renderPrivateMessages();
 
     renderPrivateChatsBar();
+
+    /*
+      Envoi direct au canal personnel
+      du destinataire.
+    */
+
+    const targetChannel =
+      supabaseClient.channel(
+        `oceanchat-user-${targetUser.id}`
+      );
+
+    await new Promise(
+      resolve => {
+
+        targetChannel.subscribe(
+          status => {
+
+            if (
+              status ===
+              "SUBSCRIBED"
+            ) {
+
+              resolve();
+
+            }
+
+          }
+        );
+
+      }
+    );
+
+    await targetChannel.send({
+
+      type:
+        "broadcast",
+
+      event:
+        "private-message",
+
+      payload
+
+    });
+
+    /*
+      Supprimer le canal temporaire
+      après l'envoi.
+    */
+
+    setTimeout(
+      () => {
+
+        supabaseClient.removeChannel(
+          targetChannel
+        );
+
+      },
+      1000
+    );
   }
 
   if (privateMessageForm) {
 
     privateMessageForm.addEventListener(
       "submit",
-      async (event) => {
+      async event => {
 
         event.preventDefault();
 
@@ -1174,10 +1750,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     privateMessageInput.addEventListener(
       "keydown",
-      async (event) => {
+      async event => {
 
         if (
-          event.key === "Enter" &&
+          event.key ===
+            "Enter" &&
           !event.shiftKey
         ) {
 
@@ -1195,7 +1772,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sendPrivateMessage.addEventListener(
       "click",
-      async (event) => {
+      async event => {
 
         event.preventDefault();
 
@@ -1206,27 +1783,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* =========================================================
-     RECEVOIR MESSAGE PRIVÉ
+     RECEVOIR MESSAGE
      ========================================================= */
 
   function receivePrivateMessage(
     payload
   ) {
 
-    console.log(
-      "💬 Traitement message privé :",
-      payload
-    );
-
     let conversation =
       privateConversations.get(
         payload.from
       );
-
-    /*
-      Si la conversation n'existe pas encore,
-      on crée automatiquement la conversation.
-    */
 
     if (!conversation) {
 
@@ -1235,32 +1802,31 @@ document.addEventListener("DOMContentLoaded", () => {
           payload.from
         );
 
-      /*
-        Si l'utilisateur n'est plus dans
-        la liste en ligne, on crée quand même
-        son profil avec les informations du message.
-      */
-
       if (!sender) {
 
         sender = {
-          id: payload.from,
+
+          id:
+            payload.from,
+
           pseudo:
             payload.pseudo ||
             "Utilisateur"
+
         };
 
       }
 
       conversation = {
 
-        user: sender,
+        user:
+          sender,
 
-        messages: [],
+        messages:[],
 
-        minimized: true,
+        minimized:true,
 
-        unread: true
+        unread:true
 
       };
 
@@ -1268,16 +1834,12 @@ document.addEventListener("DOMContentLoaded", () => {
         payload.from,
         conversation
       );
+
     }
 
     conversation.messages.push(
       payload
     );
-
-    /*
-      Si cette conversation n'est pas ouverte,
-      elle devient une notification rouge.
-    */
 
     const isOpen =
       activePrivateUserId ===
@@ -1286,11 +1848,19 @@ document.addEventListener("DOMContentLoaded", () => {
       privateModal.style.display !==
         "none";
 
+    /*
+      Si la discussion n'est pas ouverte :
+      elle reste dans la barre du bas
+      et clignote en rouge.
+    */
+
     if (!isOpen) {
 
-      conversation.minimized = true;
+      conversation.minimized =
+        true;
 
-      conversation.unread = true;
+      conversation.unread =
+        true;
 
     }
 
@@ -1302,148 +1872,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderPrivateChatsBar();
 
-    /*
-      Notification navigateur.
-    */
-
-    try {
-
-      if (
-        document.hidden &&
-        "Notification" in window &&
-        Notification.permission ===
-          "granted"
-      ) {
-
-        new Notification(
-          `Message de ${payload.pseudo}`,
-          {
-            body: payload.text
-          }
-        );
-
-      }
-
-    } catch (error) {}
   }
 
   /* =========================================================
-     OUVRIR CONVERSATION
-     ========================================================= */
-
-  function openPrivateChat(user) {
-
-    if (!user?.id) return;
-
-    activePrivateUserId =
-      user.id;
-
-    if (!privateConversations.has(
-      user.id
-    )) {
-
-      privateConversations.set(
-        user.id,
-        {
-          user,
-          messages: [],
-          minimized: false,
-          unread: false
-        }
-      );
-
-    }
-
-    const conversation =
-      privateConversations.get(
-        user.id
-      );
-
-    conversation.user = user;
-
-    conversation.minimized = false;
-
-    conversation.unread = false;
-
-    if (privateModal) {
-      privateModal.style.display =
-        "flex";
-    }
-
-    if (privateTitle) {
-      privateTitle.textContent =
-        user.pseudo;
-    }
-
-    renderPrivateMessages();
-
-    renderPrivateChatsBar();
-
-    setTimeout(() => {
-
-      privateMessageInput?.focus();
-
-    }, 100);
-  }
-
-  /* =========================================================
-     AFFICHER MESSAGES PRIVES
-     ========================================================= */
-
-  function renderPrivateMessages() {
-
-    if (!privateMessages) return;
-
-    privateMessages.innerHTML = "";
-
-    if (!activePrivateUserId) {
-      return;
-    }
-
-    const conversation =
-      privateConversations.get(
-        activePrivateUserId
-      );
-
-    if (!conversation) {
-      return;
-    }
-
-    conversation.messages.forEach(
-      (msg) => {
-
-        const div =
-          document.createElement("div");
-
-        div.className =
-          msg.from === currentUser.id
-            ? "message own-message"
-            : "message";
-
-        div.innerHTML = `
-          <div class="message-author">
-            ${escapeHtml(msg.pseudo)}
-          </div>
-
-          <div class="message-text">
-            ${escapeHtml(msg.text)}
-          </div>
-        `;
-
-        privateMessages.appendChild(
-          div
-        );
-
-      }
-    );
-
-    scrollBottom(
-      privateMessages
-    );
-  }
-
-  /* =========================================================
-     BARRE NOTIFICATIONS PRIVÉES
+     ⭐ BARRE DISCUSSIONS REDUITES
      ========================================================= */
 
   function renderPrivateChatsBar() {
@@ -1452,20 +1884,52 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    privateChatsBar.innerHTML = "";
+    /*
+      IMPORTANT :
+      On ne cache PLUS la barre.
+    */
+
+    privateChatsBar.style.display =
+      "flex";
+
+    privateChatsBar.innerHTML =
+      "";
 
     privateConversations.forEach(
       (conversation) => {
 
-        const button =
-          document.createElement("button");
+        /*
+          Une discussion existe dans
+          la barre tant qu'elle n'est
+          pas actuellement ouverte.
+        */
 
-        button.type = "button";
+        if (
+          activePrivateUserId ===
+          conversation.user?.id &&
+          privateModal &&
+          privateModal.style.display !==
+            "none"
+        ) {
+
+          return;
+
+        }
+
+        const button =
+          document.createElement(
+            "button"
+          );
+
+        button.type =
+          "button";
 
         button.className =
           "minimized-private-chat";
 
-        if (conversation.unread) {
+        if (
+          conversation.unread
+        ) {
 
           button.classList.add(
             "new-message"
@@ -1478,6 +1942,9 @@ document.addEventListener("DOMContentLoaded", () => {
             conversation.user?.pseudo ||
             "Utilisateur"
           }`;
+
+        button.title =
+          "Ouvrir la discussion";
 
         button.addEventListener(
           "click",
@@ -1496,6 +1963,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
       }
     );
+
+    /*
+      Si aucune discussion réduite :
+      on garde quand même un petit espace
+      propre sous le chat.
+    */
+
+    if (
+      privateChatsBar.children.length ===
+      0
+    ) {
+
+      privateChatsBar.style.display =
+        "none";
+
+    } else {
+
+      privateChatsBar.style.display =
+        "flex";
+
+    }
   }
 
   /* =========================================================
@@ -1524,12 +2012,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
         }
 
+        /*
+          On ferme seulement la fenêtre
+          privée.
+
+          La discussion reste visible
+          dans la barre EN BAS.
+        */
+
         if (privateModal) {
 
           privateModal.style.display =
             "none";
 
         }
+
+        /*
+          Très important :
+          on ne supprime PAS
+          activePrivateUserId.
+
+          On le remet simplement à null.
+        */
+
+        activePrivateUserId =
+          null;
 
         renderPrivateChatsBar();
 
@@ -1538,7 +2045,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* =========================================================
-     FERMER
+     FERMER COMPLETEMENT
      ========================================================= */
 
   if (closePrivate) {
@@ -1555,7 +2062,8 @@ document.addEventListener("DOMContentLoaded", () => {
           activePrivateUserId
         );
 
-        activePrivateUserId = null;
+        activePrivateUserId =
+          null;
 
         if (privateModal) {
 
@@ -1577,6 +2085,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const rtcConfiguration = {
 
     iceServers: [
+
       {
         urls:
           "stun:stun.l.google.com:19302"
@@ -1586,12 +2095,13 @@ document.addEventListener("DOMContentLoaded", () => {
         urls:
           "stun:stun1.l.google.com:19302"
       }
+
     ]
 
   };
 
   /* =========================================================
-     ENVOYER SIGNAL APPEL
+     SIGNAL APPEL
      ========================================================= */
 
   async function sendCallSignal(
@@ -1603,74 +2113,93 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const channelName =
-      `oceanchat-user-${payload.to}`;
-
     const channel =
       supabaseClient.channel(
-        channelName
+        `oceanchat-user-${payload.to}`
       );
 
-    await new Promise((resolve) => {
+    await new Promise(
+      resolve => {
 
-      channel.subscribe(
-        (status) => {
+        channel.subscribe(
+          status => {
 
-          if (
-            status === "SUBSCRIBED"
-          ) {
-            resolve();
+            if (
+              status ===
+              "SUBSCRIBED"
+            ) {
+
+              resolve();
+
+            }
+
           }
+        );
 
-        }
-      );
-
-    });
+      }
+    );
 
     await channel.send({
-      type: "broadcast",
-      event: eventName,
+
+      type:
+        "broadcast",
+
+      event:
+        eventName,
+
       payload
+
     });
 
-    setTimeout(() => {
+    setTimeout(
+      () => {
 
-      supabaseClient.removeChannel(
-        channel
-      );
+        supabaseClient.removeChannel(
+          channel
+        );
 
-    }, 1000);
+      },
+      1000
+    );
   }
 
   /* =========================================================
      MEDIA
      ========================================================= */
 
-  async function getMedia(type) {
+  async function getMedia(
+    type
+  ) {
 
-    return navigator.mediaDevices.getUserMedia(
-      type === "video"
-        ? {
-            audio: true,
-            video: {
-              facingMode: "user",
-              width: {
-                ideal: 1280
-              },
-              height: {
-                ideal: 720
+    return navigator.mediaDevices
+      .getUserMedia(
+
+        type === "video"
+
+          ? {
+              audio:true,
+
+              video:{
+                facingMode:"user",
+                width:{
+                  ideal:1280
+                },
+                height:{
+                  ideal:720
+                }
               }
             }
-          }
-        : {
-            audio: true,
-            video: false
-          }
-    );
+
+          : {
+              audio:true,
+              video:false
+            }
+
+      );
   }
 
   /* =========================================================
-     MODAL APPEL
+     AFFICHER APPEL
      ========================================================= */
 
   function showCallModal(
@@ -1680,11 +2209,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     callModal.style.display =
       "flex";
-
-    callModal.classList.toggle(
-      "oceanchat-audio-call",
-      type === "audio"
-    );
 
     callTitle.textContent =
       type === "video"
@@ -1700,12 +2224,14 @@ document.addEventListener("DOMContentLoaded", () => {
       type === "audio"
         ? "block"
         : "none";
+
   }
 
   function hideCallModal() {
 
     callModal.style.display =
       "none";
+
   }
 
   /* =========================================================
@@ -1727,7 +2253,7 @@ document.addEventListener("DOMContentLoaded", () => {
       callState.localStream
         .getTracks()
         .forEach(
-          (track) => {
+          track => {
 
             pc.addTrack(
               track,
@@ -1745,24 +2271,26 @@ document.addEventListener("DOMContentLoaded", () => {
     remoteVideo.srcObject =
       callState.remoteStream;
 
-    pc.ontrack = (event) => {
+    pc.ontrack =
+      event => {
 
-      event.streams[0]
-        ?.getTracks()
-        .forEach(
-          (track) => {
+        event.streams[0]
+          ?.getTracks()
+          .forEach(
+            track => {
 
-            callState.remoteStream.addTrack(
-              track
-            );
+              callState.remoteStream
+                .addTrack(
+                  track
+                );
 
-          }
-        );
+            }
+          );
 
-    };
+      };
 
     pc.onicecandidate =
-      async (event) => {
+      async event => {
 
         if (!event.candidate) {
           return;
@@ -1771,12 +2299,19 @@ document.addEventListener("DOMContentLoaded", () => {
         await sendCallSignal(
           "ice-candidate",
           {
-            to: callState.peerId,
-            from: currentUser.id,
+
+            to:
+              callState.peerId,
+
+            from:
+              currentUser.id,
+
             callId:
               callState.callId,
+
             candidate:
               event.candidate
+
           }
         );
 
@@ -1785,11 +2320,6 @@ document.addEventListener("DOMContentLoaded", () => {
     pc.onconnectionstatechange =
       () => {
 
-        console.log(
-          "WebRTC :",
-          pc.connectionState
-        );
-
         if (
           pc.connectionState ===
           "connected"
@@ -1797,9 +2327,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
           callStatus.textContent =
             "🟢 Appel connecté";
-
-          hangupBtn.style.display =
-            "inline-block";
 
         }
 
@@ -1810,9 +2337,11 @@ document.addEventListener("DOMContentLoaded", () => {
             "closed"
         ) {
 
-          setTimeout(() => {
-            cleanupCall(false);
-          }, 1000);
+          setTimeout(
+            () =>
+              cleanupCall(),
+            1000
+          );
 
         }
 
@@ -1822,10 +2351,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* =========================================================
-     DEMARRER APPEL
+     APPEL SORTANT
      ========================================================= */
 
-  async function startCall(type) {
+  async function startCall(
+    type
+  ) {
 
     if (
       !activePrivateUserId ||
@@ -1848,27 +2379,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     callState = {
 
-      active: true,
+      active:true,
 
-      callId: createId(),
+      callId:
+        createId(),
 
       type,
 
-      role: "caller",
+      role:
+        "caller",
 
-      peerId: user.id,
+      peerId:
+        user.id,
 
-      peerPseudo: user.pseudo,
+      peerPseudo:
+        user.pseudo,
 
-      peerConnection: null,
+      peerConnection:null,
 
-      localStream: null,
+      localStream:null,
 
-      remoteStream: null,
+      remoteStream:null,
 
-      pendingOffer: null,
+      pendingOffer:null,
 
-      pendingIceCandidates: []
+      pendingIceCandidates:[]
 
     };
 
@@ -1889,7 +2424,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
 
       callState.localStream =
-        await getMedia(type);
+        await getMedia(
+          type
+        );
 
       localVideo.srcObject =
         callState.localStream;
@@ -1907,15 +2444,24 @@ document.addEventListener("DOMContentLoaded", () => {
       await sendCallSignal(
         "call-offer",
         {
-          to: user.id,
-          from: currentUser.id,
+
+          to:
+            user.id,
+
+          from:
+            currentUser.id,
+
           callId:
             callState.callId,
+
           type,
+
           pseudo:
             currentUser.pseudo,
+
           sdp:
             pc.localDescription
+
         }
       );
 
@@ -1924,15 +2470,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        error
+      );
 
       callStatus.textContent =
-        "❌ Micro ou caméra inaccessible.";
+        "❌ Impossible d'utiliser le micro ou la caméra.";
 
       setTimeout(
-        () => cleanupCall(false),
+        () =>
+          cleanupCall(),
         2000
       );
+
     }
   }
 
@@ -1940,12 +2490,17 @@ document.addEventListener("DOMContentLoaded", () => {
      APPEL ENTRANT
      ========================================================= */
 
-  function receiveCallOffer(payload) {
+  function receiveCallOffer(
+    payload
+  ) {
 
-    if (!payload) return;
+    if (!payload) {
+      return;
+    }
 
     if (
-      payload.to !== currentUser.id
+      payload.to !==
+      currentUser.id
     ) {
       return;
     }
@@ -1955,11 +2510,19 @@ document.addEventListener("DOMContentLoaded", () => {
       sendCallSignal(
         "call-reject",
         {
-          to: payload.from,
-          from: currentUser.id,
+
+          to:
+            payload.from,
+
+          from:
+            currentUser.id,
+
           callId:
             payload.callId,
-          reason: "busy"
+
+          reason:
+            "busy"
+
         }
       );
 
@@ -1968,7 +2531,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     callState = {
 
-      active: true,
+      active:true,
 
       callId:
         payload.callId,
@@ -1976,7 +2539,8 @@ document.addEventListener("DOMContentLoaded", () => {
       type:
         payload.type,
 
-      role: "receiver",
+      role:
+        "receiver",
 
       peerId:
         payload.from,
@@ -1985,16 +2549,16 @@ document.addEventListener("DOMContentLoaded", () => {
         payload.pseudo ||
         "Utilisateur",
 
-      peerConnection: null,
+      peerConnection:null,
 
-      localStream: null,
+      localStream:null,
 
-      remoteStream: null,
+      remoteStream:null,
 
       pendingOffer:
         payload.sdp,
 
-      pendingIceCandidates: []
+      pendingIceCandidates:[]
 
     };
 
@@ -2013,10 +2577,11 @@ document.addEventListener("DOMContentLoaded", () => {
       payload.type === "video"
         ? "📹 Appel vidéo entrant"
         : "🎤 Appel vocal entrant";
+
   }
 
   /* =========================================================
-     ACCEPTER
+     ACCEPTER APPEL
      ========================================================= */
 
   async function acceptCall() {
@@ -2063,15 +2628,19 @@ document.addEventListener("DOMContentLoaded", () => {
       await sendCallSignal(
         "call-answer",
         {
-          to: callState.peerId,
 
-          from: currentUser.id,
+          to:
+            callState.peerId,
+
+          from:
+            currentUser.id,
 
           callId:
             callState.callId,
 
           sdp:
             pc.localDescription
+
         }
       );
 
@@ -2079,11 +2648,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        error
+      );
 
       await sendCallSignal(
         "call-reject",
         {
+
           to:
             callState.peerId,
 
@@ -2095,16 +2667,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
           reason:
             "media-error"
+
         }
       );
 
-      cleanupCall(false);
+      cleanupCall();
 
     }
   }
 
   /* =========================================================
-     REFUSER
+     REFUSER APPEL
      ========================================================= */
 
   async function rejectCall() {
@@ -2117,6 +2690,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await sendCallSignal(
         "call-reject",
         {
+
           to:
             callState.peerId,
 
@@ -2128,16 +2702,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
           reason:
             "rejected"
+
         }
       );
 
     }
 
-    cleanupCall(false);
+    cleanupCall();
+
   }
 
   /* =========================================================
-     ANSWER
+     REPONSE APPEL
      ========================================================= */
 
   async function receiveCallAnswer(
@@ -2146,7 +2722,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (
       !payload ||
-      payload.to !== currentUser.id
+      payload.to !==
+        currentUser.id
     ) {
       return;
     }
@@ -2176,7 +2753,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        error
+      );
 
     }
   }
@@ -2191,7 +2770,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (
       !payload ||
-      payload.to !== currentUser.id
+      payload.to !==
+        currentUser.id
     ) {
       return;
     }
@@ -2229,7 +2809,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        error
+      );
 
     }
   }
@@ -2251,7 +2833,8 @@ document.addEventListener("DOMContentLoaded", () => {
       [];
 
     for (
-      const candidate of candidates
+      const candidate of
+      candidates
     ) {
 
       try {
@@ -2265,7 +2848,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       } catch (error) {
 
-        console.error(error);
+        console.error(
+          error
+        );
 
       }
 
@@ -2273,14 +2858,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* =========================================================
-     REFUS APPEL
+     APPEL REFUSE
      ========================================================= */
 
-  function receiveCallReject(payload) {
+  function receiveCallReject(
+    payload
+  ) {
 
     if (
       !payload ||
-      payload.to !== currentUser.id
+      payload.to !==
+        currentUser.id
     ) {
       return;
     }
@@ -2294,18 +2882,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     callStatus.textContent =
-      payload.reason === "busy"
+      payload.reason ===
+      "busy"
         ? "🔴 Utilisateur déjà en appel."
         : "❌ Appel refusé.";
 
     setTimeout(
-      () => cleanupCall(false),
+      () =>
+        cleanupCall(),
       1500
     );
   }
 
   /* =========================================================
-     FIN APPEL
+     RACCROCHER
      ========================================================= */
 
   async function hangupCall() {
@@ -2319,6 +2909,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await sendCallSignal(
         "call-end",
         {
+
           to:
             callState.peerId,
 
@@ -2327,19 +2918,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
           callId:
             callState.callId
+
         }
       );
 
     }
 
-    cleanupCall(false);
+    cleanupCall();
+
   }
 
-  function receiveCallEnd(payload) {
+  /* =========================================================
+     APPEL TERMINE
+     ========================================================= */
+
+  function receiveCallEnd(
+    payload
+  ) {
 
     if (
       !payload ||
-      payload.to !== currentUser.id
+      payload.to !==
+        currentUser.id
     ) {
       return;
     }
@@ -2356,18 +2956,21 @@ document.addEventListener("DOMContentLoaded", () => {
       "📵 Appel terminé.";
 
     setTimeout(
-      () => cleanupCall(false),
+      () =>
+        cleanupCall(),
       700
     );
   }
 
   /* =========================================================
-     NETTOYAGE APPEL
+     NETTOYER APPEL
      ========================================================= */
 
   function cleanupCall() {
 
-    if (callState.localStream) {
+    if (
+      callState.localStream
+    ) {
 
       callState.localStream
         .getTracks()
@@ -2380,47 +2983,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
           }
         );
+
     }
 
-    if (callState.peerConnection) {
+    if (
+      callState.peerConnection
+    ) {
 
       try {
-        callState.peerConnection.close();
+
+        callState.peerConnection
+          .close();
+
       } catch (e) {}
 
     }
 
     if (localVideo) {
-      localVideo.srcObject = null;
+      localVideo.srcObject =
+        null;
     }
 
     if (remoteVideo) {
-      remoteVideo.srcObject = null;
+      remoteVideo.srcObject =
+        null;
     }
 
     callState = {
 
-      active: false,
+      active:false,
 
-      callId: null,
+      callId:null,
 
-      type: null,
+      type:null,
 
-      role: null,
+      role:null,
 
-      peerId: null,
+      peerId:null,
 
-      peerPseudo: null,
+      peerPseudo:null,
 
-      peerConnection: null,
+      peerConnection:null,
 
-      localStream: null,
+      localStream:null,
 
-      remoteStream: null,
+      remoteStream:null,
 
-      pendingOffer: null,
+      pendingOffer:null,
 
-      pendingIceCandidates: []
+      pendingIceCandidates:[]
 
     };
 
@@ -2435,6 +3046,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     hideCallModal();
+
   }
 
   /* =========================================================
@@ -2445,7 +3057,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     videoCallBtn.addEventListener(
       "click",
-      () => startCall("video")
+      () =>
+        startCall("video")
     );
 
   }
@@ -2454,7 +3067,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     audioCallBtn.addEventListener(
       "click",
-      () => startCall("audio")
+      () =>
+        startCall("audio")
     );
 
   }
@@ -2504,7 +3118,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (presenceChannel) {
 
-            await presenceChannel.untrack();
+            await presenceChannel
+              .untrack();
 
             await supabaseClient
               .removeChannel(
@@ -2548,29 +3163,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* =========================================================
-     NOTIFICATIONS
+     FIN
      ========================================================= */
 
-  try {
-
-    if (
-      "Notification" in window &&
-      Notification.permission === "default"
-    ) {
-
-      Notification.requestPermission()
-        .catch(() => {});
-
-    }
-
-  } catch (e) {}
-
   console.log(
-    "🌊 OceanChat : système complet chargé."
+    "🌊 OceanChat mobile chargé."
   );
 
   console.log(
-    "💬 Messages privés : canal personnel activé."
+    "💬 Discussions réduites en bas du salon."
   );
 
   console.log(
