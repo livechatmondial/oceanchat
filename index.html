@@ -1,124 +1,838 @@
+```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OceanChat - Chat en Temps Réel</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <!-- En-tête -->
-        <header class="header">
-            <h1>🌊 OceanChat</h1>
-            <p>Chat en temps réel - Connectez-vous avec le monde</p>
-        </header>
 
-        <!-- SECTION LOGIN -->
-        <div id="loginSection" class="login-section">
-            <h2>Votre Profil</h2>
-            <form id="profileForm" class="profile-form">
-                <div class="form-row">
-                    <input type="text" id="pseudo" placeholder="Pseudo" required maxlength="20">
-                    <input type="number" id="age" placeholder="Âge" min="13" max="120" required>
+    <title>🌊 OceanChat</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0077b6, #00b4d8);
+            min-height: 100vh;
+            color: #222;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        /* =========================
+           CONNEXION
+        ========================= */
+
+        #loginSection {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 450px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.25);
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 38px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 7px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+        }
+
+        .btn-connect {
+            width: 100%;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            background: #0077b6;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-connect:hover {
+            background: #005f8f;
+        }
+
+        /* =========================
+           CHAT
+        ========================= */
+
+        #chatSection {
+            display: none;
+            min-height: 100vh;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.25);
+        }
+
+        .chat-header {
+            background: #0077b6;
+            color: white;
+            padding: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        #userDisplay {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .btn-logout {
+            border: none;
+            background: white;
+            color: #0077b6;
+            padding: 9px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .chat-layout {
+            display: flex;
+            min-height: 650px;
+        }
+
+        /* =========================
+           UTILISATEURS
+        ========================= */
+
+        .users-panel {
+            width: 280px;
+            border-right: 1px solid #ddd;
+            background: #f7f9fa;
+            padding: 15px;
+        }
+
+        .users-panel h2 {
+            margin-top: 0;
+        }
+
+        #onlineCount {
+            color: #0077b6;
+        }
+
+        .user-item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+
+        .user-item:hover,
+        .user-item.active {
+            background: #e8f7fc;
+        }
+
+        .user-item-name {
+            font-weight: bold;
+        }
+
+        .user-item-info {
+            font-size: 13px;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        /* =========================
+           CHAT PUBLIC
+        ========================= */
+
+        .public-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #messages {
+            flex: 1;
+            min-height: 500px;
+            padding: 20px;
+            overflow-y: auto;
+            background: #fff;
+        }
+
+        .message {
+            max-width: 80%;
+            margin-bottom: 12px;
+            padding: 11px 14px;
+            border-radius: 12px;
+            background: #eeeeee;
+        }
+
+        .message.user {
+            margin-left: auto;
+            background: #d9f3ff;
+        }
+
+        .message.system {
+            margin-left: auto;
+            margin-right: auto;
+            background: #f1f1f1;
+            text-align: center;
+            color: #666;
+        }
+
+        .message-author {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #777;
+            margin-top: 5px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 8px;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 13px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .btn-send {
+            border: none;
+            background: #0077b6;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* =========================
+           CHAT PRIVÉ
+        ========================= */
+
+        #privateModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            z-index: 1000;
+        }
+
+        .private-box {
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
+            background: white;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .private-header {
+            background: #0077b6;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #privateTitle {
+            font-weight: bold;
+        }
+
+        .btn-close {
+            border: none;
+            background: white;
+            color: #0077b6;
+            border-radius: 7px;
+            padding: 7px 10px;
+            cursor: pointer;
+        }
+
+        .private-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .private-input-area {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            border-top: 1px solid #ddd;
+        }
+
+        #privateMessageInput {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 9px;
+        }
+
+        .private-message {
+            max-width: 80%;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+        }
+
+        .private-message.sent {
+            margin-left: auto;
+            background: #d9f3ff;
+        }
+
+        .private-message.received {
+            background: #eeeeee;
+        }
+
+        /* =========================
+           INSCRIPTION
+        ========================= */
+
+        .footer {
+            padding: 30px;
+            background: #f7f9fa;
+        }
+
+        .signup-section {
+            max-width: 700px;
+            margin: auto;
+            text-align: center;
+        }
+
+        .signup-form {
+            margin-top: 15px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .form-row input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 9px;
+        }
+
+        .btn-signup {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 9px;
+            background: #0077b6;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .terms {
+            font-size: 12px;
+            color: #777;
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 700px) {
+
+            .container {
+                padding: 0;
+            }
+
+            #chatSection {
+                border-radius: 0;
+            }
+
+            .chat-layout {
+                flex-direction: column;
+            }
+
+            .users-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+                max-height: 180px;
+                overflow-y: auto;
+            }
+
+            #messages {
+                min-height: 400px;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .chat-header {
+                align-items: flex-start;
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- =========================
+         PAGE DE CONNEXION
+    ========================== -->
+
+    <section id="loginSection">
+
+        <div class="login-box">
+
+            <div class="logo">
+                🌊 OceanChat
+            </div>
+
+            <div class="subtitle">
+                Rencontrez de nouvelles personnes et discutez en ligne 💬
+            </div>
+
+            <form id="profileForm">
+
+                <div class="form-group">
+
+                    <label for="pseudo">
+                        Pseudo
+                    </label>
+
+                    <input
+                        type="text"
+                        id="pseudo"
+                        placeholder="Votre pseudo"
+                        maxlength="30"
+                        required
+                    >
+
                 </div>
-                <div class="form-row">
+
+
+                <div class="form-group">
+
+                    <label for="age">
+                        Âge
+                    </label>
+
+                    <input
+                        type="number"
+                        id="age"
+                        placeholder="Votre âge"
+                        min="18"
+                        max="120"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="sexe">
+                        Sexe
+                    </label>
+
                     <select id="sexe" required>
-                        <option value="">Sélectionnez votre sexe</option>
-                        <option value="homme">Homme</option>
-                        <option value="femme">Femme</option>
-                        <option value="autre">Autre</option>
+
+                        <option value="">
+                            Sélectionnez
+                        </option>
+
+                        <option value="Homme">
+                            Homme
+                        </option>
+
+                        <option value="Femme">
+                            Femme
+                        </option>
+
+                        <option value="Autre">
+                            Autre
+                        </option>
+
                     </select>
-                    <select id="pays" required>
-                        <option value="">Sélectionnez votre pays</option>
-                        <option value="france">France</option>
-                        <option value="belgique">Belgique</option>
-                        <option value="suisse">Suisse</option>
-                        <option value="canada">Canada</option>
-                        <option value="maroc">Maroc</option>
-                        <option value="algerie">Algérie</option>
-                        <option value="tunisie">Tunisie</option>
-                        <option value="senegal">Sénégal</option>
-                        <option value="autre">Autre</option>
-                    </select>
+
                 </div>
-                <button type="submit" class="btn-connect">Se Connecter</button>
+
+
+                <div class="form-group">
+
+                    <label for="pays">
+                        Pays
+                    </label>
+
+                    <select id="pays" required>
+
+                        <option value="">
+                            Sélectionnez votre pays
+                        </option>
+
+                        <option value="Canada">
+                            🇨🇦 Canada
+                        </option>
+
+                        <option value="France">
+                            🇫🇷 France
+                        </option>
+
+                        <option value="Belgique">
+                            🇧🇪 Belgique
+                        </option>
+
+                        <option value="Suisse">
+                            🇨🇭 Suisse
+                        </option>
+
+                        <option value="États-Unis">
+                            🇺🇸 États-Unis
+                        </option>
+
+                        <option value="Algérie">
+                            🇩🇿 Algérie
+                        </option>
+
+                        <option value="Maroc">
+                            🇲🇦 Maroc
+                        </option>
+
+                        <option value="Tunisie">
+                            🇹🇳 Tunisie
+                        </option>
+
+                        <option value="Sénégal">
+                            🇸🇳 Sénégal
+                        </option>
+
+                        <option value="Côte d'Ivoire">
+                            🇨🇮 Côte d'Ivoire
+                        </option>
+
+                        <option value="Autre">
+                            🌍 Autre
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="btn-connect"
+                >
+                    🌊 Connecter
+                </button>
+
             </form>
+
         </div>
 
-        <!-- SECTION CHAT PRINCIPAL -->
-        <div id="chatSection" class="chat-container" style="display: none;">
-            <div class="chat-layout">
-                <!-- SIDEBAR - Liste des utilisateurs -->
-                <aside class="sidebar">
-                    <div class="sidebar-header">
-                        <h3>👥 Utilisateurs en ligne</h3>
-                        <span id="onlineCount" class="online-count">0</span>
+    </section>
+
+
+    <!-- =========================
+         CHAT
+    ========================== -->
+
+    <section id="chatSection">
+
+        <div style="width:100%;">
+
+            <div class="chat-header">
+
+                <div>
+
+                    <h1>
+                        🌊 OceanChat
+                    </h1>
+
+                    <div id="userDisplay">
+                        Utilisateur
                     </div>
-                    <div id="usersList" class="users-list"></div>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-logout"
+                    onclick="logout()"
+                >
+                    Déconnexion
+                </button>
+
+            </div>
+
+
+            <div class="chat-layout">
+
+                <!-- UTILISATEURS -->
+
+                <aside class="users-panel">
+
+                    <h2>
+                        👥 En ligne
+                        (<span id="onlineCount">0</span>)
+                    </h2>
+
+                    <div id="usersList"></div>
+
                 </aside>
 
-                <!-- MAIN CHAT AREA -->
-                <main class="chat-main">
-                    <!-- En-tête du chat -->
-                    <div class="chat-header">
-                        <div>
-                            <h2 id="chatTitle">Chat Public</h2>
-                            <p id="chatSubtitle">Connecté en tant que <span id="userDisplay"></span></p>
+
+                <!-- CHAT PUBLIC -->
+
+                <main class="public-chat">
+
+                    <div id="messages">
+
+                        <div class="message system">
+                            Bienvenue dans OceanChat ! 👋
                         </div>
-                        <button class="btn-logout" onclick="logout()">Déconnexion</button>
+
                     </div>
 
-                    <!-- Zone des messages -->
-                    <div class="messages" id="messages">
-                        <div class="message system">Bienvenue dans OceanChat ! 👋</div>
-                    </div>
 
-                    <!-- Zone d'entrée -->
                     <div class="input-area">
-                        <input type="text" id="messageInput" placeholder="Écrivez votre message..." autocomplete="off">
-                        <button onclick="sendMessage()" class="btn-send">Envoyer</button>
+
+                        <input
+                            type="text"
+                            id="messageInput"
+                            placeholder="Écrivez votre message..."
+                            autocomplete="off"
+                        >
+
+                        <button
+                            type="button"
+                            onclick="sendMessage()"
+                            class="btn-send"
+                        >
+                            Envoyer
+                        </button>
+
                     </div>
+
                 </main>
+
             </div>
+
+
+            <!-- =========================
+                 INSCRIPTION
+            ========================== -->
+
+            <footer class="footer">
+
+                <div class="signup-section">
+
+                    <h2>
+                        Créer un compte
+                    </h2>
+
+                    <p>
+                        Inscrivez-vous pour sauvegarder votre profil
+                        et accéder à plus de fonctionnalités.
+                    </p>
+
+                    <form
+                        id="signupForm"
+                        class="signup-form"
+                    >
+
+                        <div class="form-row">
+
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                autocomplete="email"
+                                required
+                            >
+
+                            <input
+                                type="password"
+                                placeholder="Mot de passe"
+                                autocomplete="new-password"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-row">
+
+                            <input
+                                type="password"
+                                placeholder="Confirmer le mot de passe"
+                                autocomplete="new-password"
+                                required
+                            >
+
+                            <button
+                                type="submit"
+                                class="btn-signup"
+                            >
+                                S'inscrire
+                            </button>
+
+                        </div>
+
+                        <p class="terms">
+                            En vous inscrivant, vous acceptez nos conditions d'utilisation.
+                        </p>
+
+                    </form>
+
+                </div>
+
+            </footer>
+
         </div>
 
-        <!-- MODAL MESSAGES PRIVÉS -->
-        <div id="privateModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 id="privateTitle">Messages Privés</h2>
-                    <button class="close-modal" onclick="closePrivateChat()">&times;</button>
+    </section>
+
+
+    <!-- =========================
+         CHAT PRIVÉ
+    ========================== -->
+
+    <div id="privateModal">
+
+        <div class="private-box">
+
+            <div class="private-header">
+
+                <div id="privateTitle">
+                    Chat privé
                 </div>
-                <div class="private-messages" id="privateMessages"></div>
-                <div class="private-input-area">
-                    <input type="text" id="privateMessageInput" placeholder="Message privé..." autocomplete="off">
-                    <button onclick="sendPrivateMessage()" class="btn-send">Envoyer</button>
-                </div>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    onclick="closePrivateChat()"
+                >
+                    ✕
+                </button>
+
             </div>
+
+
+            <div
+                class="private-messages"
+                id="privateMessages"
+            ></div>
+
+
+            <div class="private-input-area">
+
+                <input
+                    type="text"
+                    id="privateMessageInput"
+                    placeholder="Message privé..."
+                    autocomplete="off"
+                >
+
+                <button
+                    type="button"
+                    onclick="sendPrivateMessage()"
+                    class="btn-send"
+                >
+                    Envoyer
+                </button>
+
+            </div>
+
         </div>
 
-        <!-- Section Inscription en bas -->
-        <footer class="footer">
-            <div class="signup-section">
-                <h2>Créer un Compte</h2>
-                <p>Inscrivez-vous pour sauvegarder votre profil et accéder à plus de fonctionnalités</p>
-                <form id="signupForm" class="signup-form">
-                    <div class="form-row">
-                        <input type="email" placeholder="Email" required>
-                        <input type="password" placeholder="Mot de passe" required>
-                    </div>
-                    <div class="form-row">
-                        <input type="password" placeholder="Confirmer le mot de passe" required>
-                        <button type="submit" class="btn-signup">S'inscrire</button>
-                    </div>
-                    <p class="terms">En vous inscrivant, vous acceptez nos conditions d'utilisation</p>
-                </form>
-            </div>
-        </footer>
     </div>
+
+</div>
+
+
+<!-- =========================
+     SUPABASE
+========================= -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+<!-- =========================
+     CONFIGURATION SUPABASE
+========================= -->
+
+<script src="supabase-config.js"></script>
+
+
+<!-- =========================
+     SCRIPT OCEANCHAT
+========================= -->
+
 <script src="script.js"></script>
-    
+
+
 </body>
 </html>
+```
