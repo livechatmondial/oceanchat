@@ -1,0 +1,292 @@
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>OceanChat 🌊</title>
+
+  <meta name="description" content="OceanChat - Rencontrez de nouvelles personnes et discutez en ligne.">
+
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    #chatSection {
+      display: none;
+    }
+
+    .error-box {
+      display: none;
+      margin: 15px;
+      padding: 15px;
+      border-radius: 10px;
+      background: #ffe5e5;
+      color: #b00020;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =========================
+       CONNEXION
+  ========================== -->
+
+  <section id="loginSection">
+
+    <h1>🌊 OceanChat</h1>
+
+    <p>Rencontrez de nouvelles personnes et discutez en ligne.</p>
+
+    <div id="configError" class="error-box"></div>
+
+    <form id="profileForm">
+
+      <div>
+        <label for="pseudo">Pseudo</label>
+        <input
+          type="text"
+          id="pseudo"
+          name="pseudo"
+          placeholder="Votre pseudo"
+          required
+          maxlength="30"
+        >
+      </div>
+
+      <div>
+        <label for="age">Âge</label>
+        <input
+          type="number"
+          id="age"
+          name="age"
+          placeholder="Votre âge"
+          min="18"
+          max="120"
+          required
+        >
+      </div>
+
+      <div>
+        <label for="sexe">Sexe</label>
+        <select id="sexe" name="sexe" required>
+          <option value="">Choisir</option>
+          <option value="Homme">Homme</option>
+          <option value="Femme">Femme</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="pays">Pays</label>
+        <select id="pays" name="pays" required>
+          <option value="">Choisir votre pays</option>
+          <option value="Canada">🇨🇦 Canada</option>
+          <option value="France">🇫🇷 France</option>
+          <option value="Belgique">🇧🇪 Belgique</option>
+          <option value="Suisse">🇨🇭 Suisse</option>
+          <option value="États-Unis">🇺🇸 États-Unis</option>
+          <option value="Maroc">🇲🇦 Maroc</option>
+          <option value="Algérie">🇩🇿 Algérie</option>
+          <option value="Tunisie">🇹🇳 Tunisie</option>
+          <option value="Sénégal">🇸🇳 Sénégal</option>
+          <option value="Côte d'Ivoire">🇨🇮 Côte d'Ivoire</option>
+          <option value="Autre">🌍 Autre</option>
+        </select>
+      </div>
+
+      <br>
+
+      <button type="submit" class="btn-connect">
+        🌊 Connecter
+      </button>
+
+    </form>
+
+    <p>
+      Pas encore inscrit ?
+      <a href="inscription.html">Créer un compte</a>
+    </p>
+
+  </section>
+
+
+  <!-- =========================
+       CHAT
+  ========================== -->
+
+  <section id="chatSection">
+
+    <header>
+      <h1>🌊 OceanChat</h1>
+
+      <div>
+        👥 En ligne :
+        <span id="onlineCount">0</span>
+      </div>
+
+      <button id="logoutBtn" type="button">
+        Déconnexion
+      </button>
+    </header>
+
+
+    <!-- PROFIL CONNECTÉ -->
+
+    <div id="currentProfile">
+      <strong id="currentPseudo"></strong>
+      <span id="currentAge"></span>
+      <span id="currentSexe"></span>
+      <span id="currentPays"></span>
+    </div>
+
+
+    <!-- UTILISATEURS EN LIGNE -->
+
+    <aside>
+      <h2>👥 Utilisateurs en ligne</h2>
+
+      <div id="usersList"></div>
+    </aside>
+
+
+    <!-- CHAT PUBLIC -->
+
+    <main>
+
+      <h2>💬 Discussion publique</h2>
+
+      <div id="messages"></div>
+
+      <form id="messageForm">
+
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Écrire un message..."
+          autocomplete="off"
+          maxlength="500"
+        >
+
+        <button type="submit">
+          Envoyer
+        </button>
+
+      </form>
+
+    </main>
+
+  </section>
+
+
+  <!-- =========================
+       FENÊTRE CHAT PRIVÉ
+  ========================== -->
+
+  <div
+    id="privateModal"
+    style="display:none;"
+  >
+
+    <div>
+
+      <h2 id="privateTitle">
+        💬 Message privé
+      </h2>
+
+      <button
+        id="closePrivateBtn"
+        type="button"
+      >
+        ✕
+      </button>
+
+      <div id="privateMessages"></div>
+
+      <form id="privateMessageForm">
+
+        <input
+          type="text"
+          id="privateMessageInput"
+          placeholder="Votre message..."
+          autocomplete="off"
+          maxlength="500"
+        >
+
+        <button type="submit">
+          Envoyer
+        </button>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       SUPABASE
+       IMPORTANT : ORDRE À NE PAS CHANGER
+  ========================== -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="supabase-config.js"></script>
+
+  <script>
+
+    /*
+     * Vérification de Supabase AVANT script.js
+     */
+
+    console.log("OceanChat : vérification Supabase...");
+
+    if (!window.supabase) {
+
+      console.error("La bibliothèque Supabase n'est pas chargée.");
+
+      const errorBox = document.getElementById("configError");
+
+      if (errorBox) {
+        errorBox.style.display = "block";
+        errorBox.textContent =
+          "❌ Supabase ne se charge pas. Vérifie ta connexion Internet.";
+      }
+
+    } else if (
+      !window.OCEANCHAT_SUPABASE_URL ||
+      !window.OCEANCHAT_SUPABASE_KEY
+    ) {
+
+      console.error("Configuration Supabase introuvable.");
+
+      const errorBox = document.getElementById("configError");
+
+      if (errorBox) {
+        errorBox.style.display = "block";
+        errorBox.textContent =
+          "❌ Configuration Supabase introuvable. Vérifie le fichier supabase-config.js.";
+      }
+
+    } else {
+
+      console.log("✅ Supabase est correctement configuré.");
+
+    }
+
+  </script>
+
+  <!-- SCRIPT PRINCIPAL -->
+
+  <script src="script.js"></script>
+
+</body>
+</html>
+```
