@@ -2,267 +2,306 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>OceanChat 🌊</title>
+    <title>OceanChat</title>
 
-  <meta name="description" content="OceanChat - Chat et rencontres en ligne">
+    <link rel="stylesheet" href="./style.css?v=20260906">
 
-  <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
 </head>
 
 <body>
 
-  <!-- =========================
-       PAGE DE CONNEXION
-  ========================== -->
+<!-- ==============================
+     CONNEXION
+     ============================== -->
 
-  <section id="loginSection">
+<section id="loginSection">
 
-    <h1>🌊 OceanChat</h1>
+    <div class="login-card">
 
-    <p>Rencontrez de nouvelles personnes et discutez en ligne.</p>
+        <h1>🌊 OceanChat</h1>
 
-    <div id="configError"
-         style="display:none; padding:15px; margin:15px 0; background:#ffe5e5; color:#b00020; border-radius:10px;">
+        <p class="subtitle">
+            Rencontrez de nouvelles personnes et discutez en ligne.
+        </p>
+
+        <form id="profileForm">
+
+            <div class="form-group">
+                <label for="pseudo">Pseudo</label>
+                <input
+                    id="pseudo"
+                    type="text"
+                    placeholder="Votre pseudo"
+                    maxlength="30"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="age">Âge</label>
+                <input
+                    id="age"
+                    type="number"
+                    min="18"
+                    max="120"
+                    placeholder="Votre âge"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="sexe">Sexe</label>
+                <select id="sexe" required>
+                    <option value="">Choisir</option>
+                    <option value="Homme">Homme</option>
+                    <option value="Femme">Femme</option>
+                    <option value="Autre">Autre</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="pays">Pays</label>
+                <select id="pays" required>
+                    <option value="">Choisir votre pays</option>
+                    <option value="Canada">🇨🇦 Canada</option>
+                    <option value="France">🇫🇷 France</option>
+                    <option value="Belgique">🇧🇪 Belgique</option>
+                    <option value="Suisse">🇨🇭 Suisse</option>
+                    <option value="Maroc">🇲🇦 Maroc</option>
+                    <option value="Algérie">🇩🇿 Algérie</option>
+                    <option value="Tunisie">🇹🇳 Tunisie</option>
+                    <option value="Sénégal">🇸🇳 Sénégal</option>
+                    <option value="Côte d'Ivoire">🇨🇮 Côte d'Ivoire</option>
+                    <option value="États-Unis">🇺🇸 États-Unis</option>
+                    <option value="Autre">🌎 Autre</option>
+                </select>
+            </div>
+
+            <button
+                type="submit"
+                class="btn-connect"
+            >
+                🌊 Connecter
+            </button>
+
+        </form>
+
+        <div class="signup-footer">
+            Nouveau sur OceanChat ?
+            <a href="inscription.html">Créer un compte</a>
+        </div>
+
     </div>
 
-    <form id="profileForm">
-
-      <label for="pseudo">Pseudo</label>
-      <input
-        id="pseudo"
-        name="pseudo"
-        type="text"
-        placeholder="Votre pseudo"
-        maxlength="30"
-        required
-      >
-
-      <label for="age">Âge</label>
-      <input
-        id="age"
-        name="age"
-        type="number"
-        min="18"
-        max="120"
-        placeholder="Votre âge"
-        required
-      >
-
-      <label for="sexe">Sexe</label>
-      <select id="sexe" name="sexe" required>
-        <option value="">Choisir</option>
-        <option value="Homme">Homme</option>
-        <option value="Femme">Femme</option>
-        <option value="Autre">Autre</option>
-      </select>
-
-      <label for="pays">Pays</label>
-      <select id="pays" name="pays" required>
-        <option value="">Choisir votre pays</option>
-        <option value="Canada">🇨🇦 Canada</option>
-        <option value="France">🇫🇷 France</option>
-        <option value="Belgique">🇧🇪 Belgique</option>
-        <option value="Suisse">🇨🇭 Suisse</option>
-        <option value="États-Unis">🇺🇸 États-Unis</option>
-        <option value="Maroc">🇲🇦 Maroc</option>
-        <option value="Algérie">🇩🇿 Algérie</option>
-        <option value="Tunisie">🇹🇳 Tunisie</option>
-        <option value="Sénégal">🇸🇳 Sénégal</option>
-        <option value="Côte d'Ivoire">🇨🇮 Côte d'Ivoire</option>
-        <option value="Autre">🌍 Autre</option>
-      </select>
-
-      <button type="submit" class="btn-connect">
-        🌊 Connecter
-      </button>
-
-    </form>
-
-    <p>
-      Pas encore inscrit ?
-      <a href="inscription.html">Créer un compte</a>
-    </p>
-
-  </section>
+</section>
 
 
-  <!-- =========================
-       ESPACE CHAT
-  ========================== -->
+<!-- ==============================
+     APPLICATION
+     ============================== -->
 
-  <section id="chatSection" style="display:none;">
+<section id="chatSection" style="display:none;">
 
-    <header>
+    <!-- HEADER -->
 
-      <h1>🌊 OceanChat</h1>
+    <header class="chat-header">
 
-      <div>
-        👥 En ligne :
-        <span id="onlineCount">0</span>
-      </div>
+        <div class="brand">
+            <h1>🌊 OceanChat</h1>
+        </div>
 
-      <button id="logoutBtn" type="button">
-        Déconnexion
-      </button>
+        <div class="header-user">
+
+            <span class="online-indicator"></span>
+
+            <span>
+                <strong id="onlineCount">0</strong>
+                en ligne
+            </span>
+
+            <button
+                id="logoutBtn"
+                class="btn-logout"
+                type="button"
+            >
+                Déconnexion
+            </button>
+
+        </div>
 
     </header>
 
 
-    <!-- PROFIL CONNECTÉ -->
+    <!-- ==========================
+         CONTENU
+         ========================== -->
 
-    <div id="currentProfile">
+    <div class="chat-layout">
 
-      <strong id="currentPseudo"></strong>
 
-      <span id="currentAge"></span>
+        <!-- ========================
+             UTILISATEURS À GAUCHE
+             ======================== -->
 
-      <span id="currentSexe"></span>
+        <aside class="users-sidebar">
 
-      <span id="currentPays"></span>
+            <div class="users-title">
+
+                <h2>👥 Utilisateurs</h2>
+
+                <p>
+                    Cliquez sur une personne
+                    pour discuter en privé.
+                </p>
+
+            </div>
+
+            <div id="usersList"></div>
+
+        </aside>
+
+
+        <!-- ========================
+             SALON PRINCIPAL
+             ======================== -->
+
+        <main class="public-chat">
+
+            <div class="chat-title">
+
+                <h2>💬 Salon principal</h2>
+
+                <span>
+                    Discutez avec tout le monde
+                </span>
+
+            </div>
+
+
+            <!-- MESSAGES PUBLICS -->
+
+            <div id="messages"></div>
+
+
+            <!-- ENVOI PUBLIC -->
+
+            <form
+                id="messageForm"
+                class="message-form"
+            >
+
+                <input
+                    id="messageInput"
+                    type="text"
+                    placeholder="Écrire un message..."
+                    autocomplete="off"
+                >
+
+                <button
+                    id="sendMessage"
+                    type="submit"
+                >
+                    Envoyer
+                </button>
+
+            </form>
+
+        </main>
+
+    </div>
+
+
+    <!-- ==============================
+         FENÊTRE PRIVÉE
+         ============================== -->
+
+    <div
+        id="privateModal"
+        class="private-window"
+    >
+
+        <div class="private-header">
+
+            <div class="private-user-title">
+
+                <span class="private-online-dot"></span>
+
+                <h3 id="privateTitle">
+                    Discussion privée
+                </h3>
+
+            </div>
+
+            <div class="private-controls">
+
+                <button
+                    id="minimizePrivate"
+                    type="button"
+                    title="Réduire"
+                >
+                    −
+                </button>
+
+                <button
+                    id="closePrivate"
+                    type="button"
+                    title="Fermer"
+                >
+                    ×
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- MESSAGES PRIVÉS -->
+
+        <div id="privateMessages"></div>
+
+
+        <!-- ENVOI PRIVÉ -->
+
+        <form
+            id="privateMessageForm"
+            class="private-form"
+        >
+
+            <input
+                id="privateMessageInput"
+                type="text"
+                placeholder="Message privé..."
+                autocomplete="off"
+            >
+
+            <button
+                id="sendPrivateMessage"
+                type="submit"
+            >
+                Envoyer
+            </button>
+
+        </form>
 
     </div>
 
 
-    <!-- UTILISATEURS EN LIGNE -->
+    <!-- BARRE DES CONVERSATIONS RÉDUITES -->
 
-    <aside>
+    <div
+        id="privateChatsBar"
+        class="private-chats-bar"
+    ></div>
 
-      <h2>👥 Utilisateurs en ligne</h2>
-
-      <div id="usersList"></div>
-
-    </aside>
-
-
-    <!-- CHAT PUBLIC -->
-
-    <main>
-
-      <h2>💬 Discussion publique</h2>
-
-      <div id="messages"></div>
-
-      <form id="messageForm">
-
-        <input
-          id="messageInput"
-          type="text"
-          placeholder="Écrire un message..."
-          autocomplete="off"
-          maxlength="500"
-          required
-        >
-
-        <button type="submit">
-          Envoyer
-        </button>
-
-      </form>
-
-    </main>
-
-  </section>
+</section>
 
 
-  <!-- =========================
-       CHAT PRIVÉ
-  ========================== -->
-
-  <div
-    id="privateModal"
-    style="display:none;"
-  >
-
-    <div>
-
-      <h2 id="privateTitle">
-        💬 Message privé
-      </h2>
-
-      <button
-        id="closePrivateBtn"
-        type="button"
-      >
-        ✕
-      </button>
-
-      <div id="privateMessages"></div>
-
-      <form id="privateMessageForm">
-
-        <input
-          id="privateMessageInput"
-          type="text"
-          placeholder="Votre message..."
-          autocomplete="off"
-          maxlength="500"
-          required
-        >
-
-        <button type="submit">
-          Envoyer
-        </button>
-
-      </form>
-
-    </div>
-
-  </div>
-
-
-  <!-- =========================
-       SUPABASE
-       NE PAS CHANGER L'ORDRE
-  ========================== -->
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script src="supabase-config.js"></script>
-
-  <script>
-
-    console.log("🌊 OceanChat : démarrage...");
-
-    const configError = document.getElementById("configError");
-
-    if (!window.supabase) {
-
-      console.error("❌ La bibliothèque Supabase n'est pas chargée.");
-
-      configError.style.display = "block";
-
-      configError.textContent =
-        "❌ Supabase ne se charge pas. Vérifie ta connexion Internet.";
-
-    }
-    else if (
-      !window.OCEANCHAT_SUPABASE_URL ||
-      !window.OCEANCHAT_SUPABASE_KEY
-    ) {
-
-      console.error("❌ supabase-config.js n'est pas correctement configuré.");
-
-      configError.style.display = "block";
-
-      configError.textContent =
-        "❌ Configuration Supabase introuvable. Vérifie supabase-config.js.";
-
-    }
-    else {
-
-      console.log("✅ Configuration Supabase détectée.");
-
-    }
-
-  </script>
-
-
-  <!-- SCRIPT PRINCIPAL -->
-
-  <script src="script.js"></script>
+<script src="script.js"></script>
 
 </body>
 </html>
