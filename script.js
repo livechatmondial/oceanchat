@@ -1,9 +1,15 @@
-```javascript
-// 🌊 OceanChat - Chat en temps réel avec Supabase
+// ======================================================
+// 🌊 OCEANCHAT - SCRIPT PRINCIPAL
+// ======================================================
+
+"use strict";
+
+// ------------------------------------------------------
+// VARIABLES
+// ------------------------------------------------------
 
 let currentUser = null;
 let messages = [];
-let privateMessages = new Map();
 let selectedPrivateUser = null;
 
 const connectedUsers = new Map();
@@ -12,1504 +18,983 @@ let presenceChannel = null;
 let publicChannel = null;
 let privateChannel = null;
 
-
-// ======================================================
-// SUPABASE
-// ======================================================
-
 const SUPABASE_URL = window.OCEANCHAT_SUPABASE_URL;
 const SUPABASE_KEY = window.OCEANCHAT_SUPABASE_KEY;
 
 let supabaseClient = null;
+
+// ------------------------------------------------------
+// SUPABASE
+// ------------------------------------------------------
 
 if (
     window.supabase &&
     SUPABASE_URL &&
     SUPABASE_KEY
 ) {
-    supabaseClient = window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
-    );
+    try {
+        supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
 
-    console.log("✅ Supabase connecté");
+        console.log("🌊 Supabase connecté");
+    } catch (error) {
+        console.error("Erreur Supabase :", error);
+    }
 } else {
-    console.error("❌ Configuration Supabase manquante");
+    console.error(
+        "❌ Supabase non configuré. Vérifie supabase-config.js"
+    );
 }
 
+// ------------------------------------------------------
+// DOM
+// ------------------------------------------------------
 
-// ======================================================
-// CONNEXION AU PROFIL
-// ======================================================
+const profileForm = document.getElementById("profileForm");
+const loginSection = document.getElementById("loginSection");
+const chatSection = document.getElementById("chatSection");
 
-const profileForm = document.getElementById('profileForm');
+const pseudoInput = document.getElementById("pseudo");
+const ageInput = document.getElementById("age");
+const sexeInput = document.getElementById("sexe");
+const paysInput = document.getElementById("pays");
+
+const messageInput = document.getElementById("messageInput");
+const messagesContainer = document.getElementById("messages");
+
+const usersList = document.getElementById("usersList");
+const onlineCount = document.getElementById("onlineCount");
+
+const privateModal = document.getElementById("privateModal");
+const privateTitle = document.getElementById("privateTitle");
+const privateMessages = document.getElementById("privateMessages");
+const privateMessageInput =
+    document.getElementById("privateMessageInput");
+
+// ------------------------------------------------------
+// UTILITAIRE
+// ------------------------------------------------------
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
+// ------------------------------------------------------
+// CONNEXION UTILISATEUR
+// ------------------------------------------------------
 
 if (profileForm) {
 
-    profileForm.addEventListener(
-        'submit',
-        async function(e) {
+    profileForm.addEventListener("submit", async function (event) {
 
-            // Empêche le formulaire de recharger la page
-            e.preventDefault();
-            e.stopPropagation();
+        event.preventDefault();
+        event.stopPropagation();
 
-            const pseudo =
-                document.getElementById('pseudo').value.trim();
+        console.log("🌊 Bouton Connecter cliqué");
 
-            const age =
-                parseInt(
-                    document.getElementById('age').value,
-                    10
-                );
+        const pseudo = pseudoInput
+            ? pseudoInput.value.trim()
+            : "";
 
-            const sexe =
-                document.getElementById('sexe').value;
+        const age = ageInput
+            ? Number(ageInput.value)
+            : 0;
 
-            const pays =
-                document.getElementById('pays').value;
+        const sexe = sexeInput
+            ? sexeInput.value
+            : "";
 
+        const pays = paysInput
+            ? paysInput.value
+            : "";
 
-            // Vérification des champs
-            if (
-                !pseudo ||
-                !age ||
-                !sexe ||
-                !pays
-            ) {
+        // Vérifications
+        if (!pseudo) {
+            alert("Entre ton pseudo.");
+            return;
+        }
 
-                alert(
-                    'Veuillez remplir tous les champs.'
-                );
+        if (!age || age < 18 || age > 120) {
+            alert("Tu dois avoir entre 18 et 120 ans.");
+            return;
+        }
 
-                return;
-            }
+        if (!sexe) {
+            alert("Choisis ton sexe.");
+            return;
+        }
 
+        if (!pays) {
+            alert("Choisis ton pays.");
+            return;
+        }
 
-            if (
-                age < 18 ||
-                age > 120
-            ) {
+        if (!supabaseClient) {
+            alert(
+                "Erreur de connexion à Supabase. Vérifie ton fichier supabase-config.js."
+            );
+            return;
+        }
 
-                alert(
-                    'Veuillez entrer un âge valide.'
-                );
+        // Création de l'utilisateur
+        currentUser = {
+            id:
+                typeof crypto !== "undefined" &&
+                crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : "user-" +
+                      Date.now() +
+                      "-" +
+                      Math.random()
+                          .toString(36)
+                          .substring(2),
 
-                return;
-            }
+            pseudo: pseudo,
+            age: age,
+            sexe: sexe,
+            pays: pays,
+            connectedAt: Date.now()
+        };
 
+        console.log("👤 Utilisateur :", currentUser);
 
-            // Vérification Supabase
-            if (!supabaseClient) {
+        // Afficher le chat
+        if (loginSection) {
+            loginSection.style.display = "none";
+        }
 
-                alert(
-                    'Supabase n’est pas configuré. Vérifiez votre fichier de configuration.'
-                );
+        if (chatSection) {
+            chatSection.style.display = "block";
+        }
 
-                return;
-            }
+        updateUserInfo();
 
+        // Connexion temps réel
+        try {
+            await connectRealtime();
 
-            // Identifiant unique de session
-            let userId;
-
-            try {
-
-                userId =
-                    crypto.randomUUID();
-
-            } catch (error) {
-
-                userId =
-                    'user-' +
-                    Date.now() +
-                    '-' +
-                    Math.random()
-                        .toString(36)
-                        .substring(2, 10);
-
-            }
-
-
-            currentUser = {
-
-                id: userId,
-
-                pseudo: pseudo,
-
-                age: age,
-
-                sexe: sexe,
-
-                pays: pays,
-
-                connectedAt: Date.now()
-
-            };
-
-
-            console.log(
-                '👤 Utilisateur connecté :',
-                currentUser
+            console.log("✅ Connexion réussie");
+        } catch (error) {
+            console.error(
+                "Erreur connexion temps réel :",
+                error
             );
 
-
-            // Afficher le chat
-            const loginSection =
-                document.getElementById(
-                    'loginSection'
-                );
-
-            const chatSection =
-                document.getElementById(
-                    'chatSection'
-                );
-
-
-            if (loginSection) {
-
-                loginSection.style.display =
-                    'none';
-
-            }
-
-
-            if (chatSection) {
-
-                chatSection.style.display =
-                    'flex';
-
-            }
-
-
-            updateUserInfo();
-
-
-            // Connexion temps réel
-            try {
-
-                await connectRealtime();
-
-            } catch (error) {
-
-                console.error(
-                    'Erreur connexion temps réel :',
-                    error
-                );
-
-                addSystemMessage(
-                    '⚠️ La connexion temps réel a rencontré un problème.'
-                );
-
-            }
-
-        }
-    );
-
-}
-
-
-// ======================================================
-// CONNEXION REALTIME
-// ======================================================
-
-async function connectRealtime() {
-
-    if (
-        !supabaseClient ||
-        !currentUser
-    ) {
-
-        throw new Error(
-            'Supabase ou utilisateur manquant.'
-        );
-
-    }
-
-
-    // -----------------------------
-    // PRÉSENCE
-    // -----------------------------
-
-    presenceChannel =
-        supabaseClient.channel(
-            'oceanchat-presence',
-            {
-                config: {
-
-                    presence: {
-
-                        key: currentUser.id
-
-                    }
-
-                }
-
-            }
-        );
-
-
-    presenceChannel.on(
-        'presence',
-        {
-            event: 'sync'
-        },
-        updateOnlineUsers
-    );
-
-
-    presenceChannel.on(
-        'presence',
-        {
-            event: 'join'
-        },
-        updateOnlineUsers
-    );
-
-
-    presenceChannel.on(
-        'presence',
-        {
-            event: 'leave'
-        },
-        updateOnlineUsers
-    );
-
-
-    await presenceChannel.subscribe(
-        async function(status) {
-
-            console.log(
-                'Statut présence :',
-                status
+            alert(
+                "La connexion au chat a rencontré un problème."
             );
-
-
-            if (
-                status === 'SUBSCRIBED'
-            ) {
-
-                await presenceChannel.track(
-                    currentUser
-                );
-
-
-                console.log(
-                    '🟢 Utilisateur visible en ligne'
-                );
-
-            }
-
         }
-    );
-
-
-    // -----------------------------
-    // CHAT PUBLIC
-    // -----------------------------
-
-    publicChannel =
-        supabaseClient.channel(
-            'oceanchat-public'
-        );
-
-
-    publicChannel.on(
-        'broadcast',
-        {
-            event: 'message'
-        },
-        function(data) {
-
-            const message =
-                data.payload;
-
-
-            if (!message) {
-
-                return;
-
-            }
-
-
-            displayMessage(
-                message,
-                currentUser &&
-                message.userId === currentUser.id
-            );
-
-        }
-    );
-
-
-    await publicChannel.subscribe();
-
-
-    // -----------------------------
-    // CHAT PRIVÉ
-    // -----------------------------
-
-    privateChannel =
-        supabaseClient.channel(
-            'oceanchat-private'
-        );
-
-
-    privateChannel.on(
-        'broadcast',
-        {
-            event: 'private-message'
-        },
-        function(data) {
-
-            const message =
-                data.payload;
-
-
-            if (!currentUser) {
-
-                return;
-
-            }
-
-
-            if (
-                message &&
-                message.to === currentUser.id &&
-                selectedPrivateUser &&
-                message.from === selectedPrivateUser.id
-            ) {
-
-                if (
-                    !privateMessages.has(
-                        selectedPrivateUser.id
-                    )
-                ) {
-
-                    privateMessages.set(
-                        selectedPrivateUser.id,
-                        []
-                    );
-
-                }
-
-
-                privateMessages
-                    .get(
-                        selectedPrivateUser.id
-                    )
-                    .push(
-                        message
-                    );
-
-
-                displayPrivateMessage(
-                    message,
-                    false
-                );
-
-            }
-
-        }
-    );
-
-
-    await privateChannel.subscribe();
-
-
-    addSystemMessage(
-        '🟢 Vous êtes connecté en temps réel !'
-    );
-
+    });
 }
 
-
-// ======================================================
-// ACTUALISER LES UTILISATEURS EN LIGNE
-// ======================================================
-
-function updateOnlineUsers() {
-
-    if (!presenceChannel) {
-
-        return;
-
-    }
-
-
-    connectedUsers.clear();
-
-
-    const state =
-        presenceChannel.presenceState();
-
-
-    Object.values(state)
-        .flat()
-        .forEach(
-            function(user) {
-
-                if (
-                    user &&
-                    user.id
-                ) {
-
-                    connectedUsers.set(
-                        user.id,
-                        user
-                    );
-
-                }
-
-            }
-        );
-
-
-    updateUsersList();
-
-}
-
-
-// ======================================================
+// ------------------------------------------------------
 // INFORMATIONS UTILISATEUR
-// ======================================================
+// ------------------------------------------------------
 
 function updateUserInfo() {
 
     if (!currentUser) {
-
         return;
-
     }
 
+    const elements =
+        document.querySelectorAll("[data-current-user]");
 
-    const userDisplay =
-        document.getElementById(
-            'userDisplay'
-        );
+    elements.forEach(function (element) {
 
+        const type = element.dataset.currentUser;
 
-    if (userDisplay) {
+        if (type === "pseudo") {
+            element.textContent = currentUser.pseudo;
+        }
 
-        userDisplay.textContent =
-            `${currentUser.pseudo} (${currentUser.age} ans, ${currentUser.pays})`;
+        if (type === "age") {
+            element.textContent = currentUser.age;
+        }
 
-    }
+        if (type === "sexe") {
+            element.textContent = currentUser.sexe;
+        }
 
+        if (type === "pays") {
+            element.textContent = currentUser.pays;
+        }
+    });
 }
 
+// ------------------------------------------------------
+// REALTIME
+// ------------------------------------------------------
 
-// ======================================================
-// LISTE DES UTILISATEURS
-// ======================================================
+async function connectRealtime() {
 
-function updateUsersList() {
-
-    const usersList =
-        document.getElementById(
-            'usersList'
+    if (!supabaseClient || !currentUser) {
+        throw new Error(
+            "Supabase ou utilisateur manquant."
         );
-
-
-    if (!usersList) {
-
-        return;
-
     }
 
+    // --------------------------------------------
+    // PRESENCE
+    // --------------------------------------------
 
-    usersList.innerHTML = '';
-
-
-    connectedUsers.forEach(
-        function(user) {
-
-            if (
-                !currentUser ||
-                user.id === currentUser.id
-            ) {
-
-                return;
-
-            }
-
-
-            const userItem =
-                document.createElement(
-                    'div'
-                );
-
-
-            userItem.className =
-                'user-item';
-
-
-            if (
-                selectedPrivateUser &&
-                selectedPrivateUser.id === user.id
-            ) {
-
-                userItem.classList.add(
-                    'active'
-                );
-
-            }
-
-
-            userItem.innerHTML = `
-
-                <div class="user-item-name">
-                    🟢 ${escapeHtml(user.pseudo)}
-                </div>
-
-                <div class="user-item-info">
-                    ${escapeHtml(String(user.age))} ans •
-                    ${escapeHtml(user.pays)}
-                </div>
-
-                <div class="user-item-info">
-                    ${escapeHtml(user.sexe)}
-                </div>
-
-            `;
-
-
-            userItem.addEventListener(
-                'click',
-                function() {
-
-                    openPrivateChat(user);
-
+    presenceChannel =
+        supabaseClient.channel(
+            "oceanchat-presence",
+            {
+                config: {
+                    presence: {
+                        key: currentUser.id
+                    }
                 }
-            );
+            }
+        );
 
+    presenceChannel
+        .on(
+            "presence",
+            {
+                event: "sync"
+            },
+            function () {
 
-            usersList.appendChild(
-                userItem
-            );
+                const state =
+                    presenceChannel.presenceState();
 
+                connectedUsers.clear();
+
+                Object.keys(state).forEach(function (key) {
+
+                    const users = state[key];
+
+                    if (
+                        users &&
+                        users.length > 0
+                    ) {
+                        connectedUsers.set(
+                            key,
+                            users[0]
+                        );
+                    }
+                });
+
+                updateUsersList();
+            }
+        );
+
+    presenceChannel.on(
+        "presence",
+        {
+            event: "join"
+        },
+        function () {
+            updateUsersList();
         }
     );
 
+    presenceChannel.on(
+        "presence",
+        {
+            event: "leave"
+        },
+        function () {
+            updateUsersList();
+        }
+    );
 
-    const onlineCount =
-        document.getElementById(
-            'onlineCount'
-        );
+    await presenceChannel.subscribe(
+        async function (status) {
 
-
-    if (onlineCount) {
-
-        onlineCount.textContent =
-            Math.max(
-                0,
-                connectedUsers.size - 1
+            console.log(
+                "Presence :",
+                status
             );
 
-    }
+            if (status === "SUBSCRIBED") {
 
+                await presenceChannel.track({
+                    id: currentUser.id,
+                    pseudo: currentUser.pseudo,
+                    age: currentUser.age,
+                    sexe: currentUser.sexe,
+                    pays: currentUser.pays
+                });
+            }
+        }
+    );
+
+    // --------------------------------------------
+    // CHAT PUBLIC
+    // --------------------------------------------
+
+    publicChannel =
+        supabaseClient.channel(
+            "oceanchat-public"
+        );
+
+    publicChannel.on(
+        "broadcast",
+        {
+            event: "message"
+        },
+        function (payload) {
+
+            if (!payload || !payload.payload) {
+                return;
+            }
+
+            const message =
+                payload.payload;
+
+            // Ne pas afficher deux fois son propre message
+            if (
+                currentUser &&
+                message.userId === currentUser.id
+            ) {
+                return;
+            }
+
+            displayPublicMessage(message);
+        }
+    );
+
+    await publicChannel.subscribe();
+
+    // --------------------------------------------
+    // MESSAGES PRIVÉS
+    // --------------------------------------------
+
+    privateChannel =
+        supabaseClient.channel(
+            "oceanchat-private"
+        );
+
+    privateChannel.on(
+        "broadcast",
+        {
+            event: "private-message"
+        },
+        function (payload) {
+
+            if (!payload || !payload.payload) {
+                return;
+            }
+
+            const message =
+                payload.payload;
+
+            if (!currentUser) {
+                return;
+            }
+
+            if (
+                message.to === currentUser.id ||
+                message.from === currentUser.id
+            ) {
+                displayPrivateMessage(message);
+            }
+        }
+    );
+
+    await privateChannel.subscribe();
+
+    console.log("🌊 OceanChat temps réel activé");
 }
 
-
-// ======================================================
+// ------------------------------------------------------
 // ENVOYER MESSAGE PUBLIC
-// ======================================================
+// ------------------------------------------------------
 
 async function sendMessage() {
 
-    const messageInput =
-        document.getElementById(
-            'messageInput'
-        );
-
+    if (!currentUser) {
+        alert("Connecte-toi d'abord.");
+        return;
+    }
 
     if (!messageInput) {
-
         return;
-
     }
 
-
-    const messageText =
+    const text =
         messageInput.value.trim();
 
-
-    if (
-        !messageText ||
-        !currentUser ||
-        !publicChannel
-    ) {
-
+    if (!text) {
         return;
-
     }
 
-
     const message = {
-
-        id: crypto.randomUUID(),
+        id:
+            Date.now() +
+            "-" +
+            Math.random()
+                .toString(36)
+                .substring(2),
 
         userId: currentUser.id,
-
         pseudo: currentUser.pseudo,
-
         age: currentUser.age,
-
         pays: currentUser.pays,
-
-        text: messageText,
-
-        timestamp: Date.now()
-
+        sexe: currentUser.sexe,
+        text: text,
+        createdAt: Date.now()
     };
 
+    messages.push(message);
+
+    // Affichage immédiat
+    displayPublicMessage(message);
+
+    messageInput.value = "";
+
+    if (!publicChannel) {
+        return;
+    }
 
     try {
 
         await publicChannel.send({
-
-            type: 'broadcast',
-
-            event: 'message',
-
+            type: "broadcast",
+            event: "message",
             payload: message
-
         });
-
-
-        // Afficher aussi son propre message
-        displayMessage(
-            message,
-            true
-        );
-
-
-        messageInput.value = '';
-
-        messageInput.focus();
 
     } catch (error) {
 
         console.error(
-            'Erreur envoi message :',
+            "Erreur envoi message :",
             error
         );
-
-        alert(
-            'Impossible d’envoyer le message.'
-        );
-
     }
-
 }
 
-
-// ======================================================
+// ------------------------------------------------------
 // AFFICHER MESSAGE PUBLIC
-// ======================================================
+// ------------------------------------------------------
 
-function displayMessage(
-    message,
-    isOwn = false
-) {
-
-    const messagesContainer =
-        document.getElementById(
-            'messages'
-        );
-
-
-    if (
-        !messagesContainer ||
-        !message
-    ) {
-
-        return;
-
-    }
-
-
-    const messageDiv =
-        document.createElement(
-            'div'
-        );
-
-
-    messageDiv.className =
-        `message ${isOwn ? 'user' : 'other'}`;
-
-
-    const time =
-        new Date(
-            message.timestamp
-        ).toLocaleTimeString(
-            'fr-FR',
-            {
-                hour: '2-digit',
-                minute: '2-digit'
-            }
-        );
-
-
-    messageDiv.innerHTML = `
-
-        <div class="message-author">
-            ${escapeHtml(message.pseudo)}
-            (${escapeHtml(String(message.age))} ans,
-            ${escapeHtml(message.pays)})
-        </div>
-
-        <div>
-            ${escapeHtml(message.text)}
-        </div>
-
-        <div class="message-time">
-            ${time}
-        </div>
-
-    `;
-
-
-    messagesContainer.appendChild(
-        messageDiv
-    );
-
-
-    messagesContainer.scrollTop =
-        messagesContainer.scrollHeight;
-
-}
-
-
-// ======================================================
-// MESSAGE SYSTÈME
-// ======================================================
-
-function addSystemMessage(text) {
-
-    const messagesContainer =
-        document.getElementById(
-            'messages'
-        );
-
+function displayPublicMessage(message) {
 
     if (!messagesContainer) {
-
         return;
-
     }
 
+    const div =
+        document.createElement("div");
 
-    const messageDiv =
-        document.createElement(
-            'div'
+    div.className =
+        "chat-message";
+
+    const name =
+        escapeHtml(
+            message.pseudo || "Utilisateur"
         );
 
+    const text =
+        escapeHtml(
+            message.text || ""
+        );
 
-    messageDiv.className =
-        'message system';
+    div.innerHTML = `
+        <div class="message-author">
+            ${name}
+        </div>
 
+        <div class="message-text">
+            ${text}
+        </div>
+    `;
 
-    messageDiv.textContent =
-        text;
-
-
-    messagesContainer.appendChild(
-        messageDiv
-    );
-
+    messagesContainer.appendChild(div);
 
     messagesContainer.scrollTop =
         messagesContainer.scrollHeight;
-
 }
 
+// ------------------------------------------------------
+// UTILISATEURS CONNECTÉS
+// ------------------------------------------------------
 
-// ======================================================
+function updateUsersList() {
+
+    if (!usersList) {
+        return;
+    }
+
+    usersList.innerHTML = "";
+
+    let count = 0;
+
+    connectedUsers.forEach(
+        function (user) {
+
+            if (
+                currentUser &&
+                user.id === currentUser.id
+            ) {
+                return;
+            }
+
+            count++;
+
+            const div =
+                document.createElement("div");
+
+            div.className =
+                "online-user";
+
+            div.innerHTML = `
+                <div class="user-name">
+                    🟢 ${escapeHtml(user.pseudo)}
+                </div>
+
+                <div class="user-info">
+                    ${escapeHtml(String(user.age))} ans
+                    • ${escapeHtml(user.sexe)}
+                    • ${escapeHtml(user.pays)}
+                </div>
+
+                <button
+                    type="button"
+                    class="private-button"
+                >
+                    💬 Message privé
+                </button>
+            `;
+
+            const button =
+                div.querySelector(
+                    ".private-button"
+                );
+
+            if (button) {
+
+                button.addEventListener(
+                    "click",
+                    function () {
+                        openPrivateChat(user);
+                    }
+                );
+            }
+
+            usersList.appendChild(div);
+        }
+    );
+
+    if (onlineCount) {
+        onlineCount.textContent =
+            String(count + (currentUser ? 1 : 0));
+    }
+
+    if (count === 0) {
+
+        const empty =
+            document.createElement("div");
+
+        empty.textContent =
+            "Aucun autre utilisateur connecté.";
+
+        usersList.appendChild(empty);
+    }
+}
+
+// ------------------------------------------------------
 // CHAT PRIVÉ
-// ======================================================
+// ------------------------------------------------------
 
 function openPrivateChat(user) {
 
     if (!user) {
-
         return;
-
     }
 
+    selectedPrivateUser = user;
 
-    selectedPrivateUser =
-        user;
-
-
-    const privateTitle =
-        document.getElementById(
-            'privateTitle'
-        );
-
+    if (privateModal) {
+        privateModal.style.display = "flex";
+    }
 
     if (privateTitle) {
 
         privateTitle.textContent =
-            `Chat privé avec ${user.pseudo}`;
-
+            "💬 " +
+            user.pseudo;
     }
 
-
-    const privateModal =
-        document.getElementById(
-            'privateModal'
-        );
-
-
-    if (privateModal) {
-
-        privateModal.style.display =
-            'flex';
-
+    if (privateMessages) {
+        privateMessages.innerHTML = "";
     }
 
-
-    if (
-        !privateMessages.has(
-            user.id
-        )
-    ) {
-
-        privateMessages.set(
-            user.id,
-            []
-        );
-
+    if (privateMessageInput) {
+        privateMessageInput.focus();
     }
-
-
-    displayPrivateMessages(
-        user.id
-    );
-
-
-    const privateInput =
-        document.getElementById(
-            'privateMessageInput'
-        );
-
-
-    if (privateInput) {
-
-        privateInput.focus();
-
-    }
-
-
-    updateUsersList();
-
 }
 
-
-// ======================================================
+// ------------------------------------------------------
 // FERMER CHAT PRIVÉ
-// ======================================================
+// ------------------------------------------------------
 
 function closePrivateChat() {
 
-    selectedPrivateUser =
-        null;
-
-
-    const privateModal =
-        document.getElementById(
-            'privateModal'
-        );
-
+    selectedPrivateUser = null;
 
     if (privateModal) {
-
-        privateModal.style.display =
-            'none';
-
+        privateModal.style.display = "none";
     }
-
-
-    const privateInput =
-        document.getElementById(
-            'privateMessageInput'
-        );
-
-
-    if (privateInput) {
-
-        privateInput.value = '';
-
-    }
-
-
-    updateUsersList();
-
 }
 
-
-// ======================================================
+// ------------------------------------------------------
 // ENVOYER MESSAGE PRIVÉ
-// ======================================================
+// ------------------------------------------------------
 
 async function sendPrivateMessage() {
 
-    if (
-        !selectedPrivateUser ||
-        !currentUser ||
-        !privateChannel
-    ) {
-
+    if (!currentUser) {
         return;
-
     }
 
-
-    const messageInput =
-        document.getElementById(
-            'privateMessageInput'
-        );
-
-
-    if (!messageInput) {
-
+    if (!selectedPrivateUser) {
         return;
-
     }
 
-
-    const messageText =
-        messageInput.value.trim();
-
-
-    if (!messageText) {
-
+    if (!privateMessageInput) {
         return;
-
     }
 
+    const text =
+        privateMessageInput.value.trim();
+
+    if (!text) {
+        return;
+    }
 
     const message = {
 
-        id: crypto.randomUUID(),
+        id:
+            Date.now() +
+            "-" +
+            Math.random()
+                .toString(36)
+                .substring(2),
 
         from: currentUser.id,
 
-        to: selectedPrivateUser.id,
+        fromPseudo:
+            currentUser.pseudo,
 
-        fromPseudo: currentUser.pseudo,
+        to:
+            selectedPrivateUser.id,
 
-        toPseudo: selectedPrivateUser.pseudo,
+        toPseudo:
+            selectedPrivateUser.pseudo,
 
-        text: messageText,
+        text: text,
 
-        timestamp: Date.now()
-
+        createdAt:
+            Date.now()
     };
 
+    displayPrivateMessage(message);
 
-    if (
-        !privateMessages.has(
-            selectedPrivateUser.id
-        )
-    ) {
+    privateMessageInput.value = "";
 
-        privateMessages.set(
-            selectedPrivateUser.id,
-            []
-        );
-
+    if (!privateChannel) {
+        return;
     }
-
-
-    privateMessages
-        .get(
-            selectedPrivateUser.id
-        )
-        .push(
-            message
-        );
-
 
     try {
 
         await privateChannel.send({
-
-            type: 'broadcast',
-
-            event: 'private-message',
-
+            type: "broadcast",
+            event: "private-message",
             payload: message
-
         });
-
-
-        displayPrivateMessage(
-            message,
-            true
-        );
-
-
-        messageInput.value = '';
-
-        messageInput.focus();
 
     } catch (error) {
 
         console.error(
-            'Erreur message privé :',
+            "Erreur message privé :",
             error
         );
-
-        alert(
-            'Impossible d’envoyer le message privé.'
-        );
-
     }
-
 }
 
-
-// ======================================================
+// ------------------------------------------------------
 // AFFICHER MESSAGE PRIVÉ
-// ======================================================
+// ------------------------------------------------------
 
-function displayPrivateMessage(
-    message,
-    isOwn = false
-) {
+function displayPrivateMessage(message) {
 
-    const container =
-        document.getElementById(
-            'privateMessages'
-        );
+    if (!privateMessages) {
+        return;
+    }
 
+    if (!currentUser) {
+        return;
+    }
 
+    // Si le message concerne une autre conversation,
+    // on ne l'affiche pas dans la fenêtre actuelle.
     if (
-        !container ||
-        !message
+        selectedPrivateUser &&
+        message.from !== selectedPrivateUser.id &&
+        message.to !== selectedPrivateUser.id
     ) {
-
         return;
-
     }
 
+    const div =
+        document.createElement("div");
 
-    const messageDiv =
-        document.createElement(
-            'div'
-        );
+    div.className =
+        "private-message";
 
-
-    messageDiv.className =
-        `private-message ${isOwn ? 'sent' : 'received'}`;
-
-
-    const time =
-        new Date(
-            message.timestamp
-        ).toLocaleTimeString(
-            'fr-FR',
-            {
-                hour: '2-digit',
-                minute: '2-digit'
-            }
-        );
-
-
-    messageDiv.innerHTML = `
-
-        <div>
-            ${escapeHtml(message.text)}
-        </div>
-
-        <small style="opacity:0.7;">
-            ${time}
-        </small>
-
-    `;
-
-
-    container.appendChild(
-        messageDiv
-    );
-
-
-    container.scrollTop =
-        container.scrollHeight;
-
-}
-
-
-// ======================================================
-// AFFICHER HISTORIQUE PRIVÉ
-// ======================================================
-
-function displayPrivateMessages(
-    userId
-) {
-
-    const container =
-        document.getElementById(
-            'privateMessages'
-        );
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    container.innerHTML = '';
-
-
-    const msgs =
-        privateMessages.get(
-            userId
-        ) || [];
-
-
-    if (msgs.length === 0) {
-
-        container.innerHTML = `
-
-            <div style="
-                text-align:center;
-                color:#999;
-                padding:20px;
-            ">
-                Commencez une conversation ! 💬
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    msgs.forEach(
-        function(msg) {
-
-            displayPrivateMessage(
-                msg,
-                currentUser &&
-                msg.from === currentUser.id
+    const author =
+        message.from === currentUser.id
+            ? "Moi"
+            : escapeHtml(
+                message.fromPseudo ||
+                "Utilisateur"
             );
 
-        }
-    );
+    div.innerHTML = `
+        <strong>${author}</strong>
+        <div>${escapeHtml(message.text)}</div>
+    `;
 
+    privateMessages.appendChild(div);
+
+    privateMessages.scrollTop =
+        privateMessages.scrollHeight;
 }
 
-
-// ======================================================
+// ------------------------------------------------------
 // DÉCONNEXION
-// ======================================================
+// ------------------------------------------------------
 
 async function logout() {
 
-    if (!currentUser) {
+    console.log("👋 Déconnexion");
 
-        return;
+    try {
 
-    }
-
-
-    if (presenceChannel) {
-
-        try {
-
+        if (presenceChannel) {
             await presenceChannel.untrack();
-
-        } catch (error) {
-
-            console.log(
-                'Erreur déconnexion présence :',
-                error
-            );
-
-        }
-
-
-        try {
-
             await supabaseClient.removeChannel(
                 presenceChannel
             );
-
-        } catch (error) {
-
-            console.log(error);
-
         }
 
-    }
-
-
-    if (publicChannel) {
-
-        try {
-
+        if (publicChannel) {
             await supabaseClient.removeChannel(
                 publicChannel
             );
-
-        } catch (error) {
-
-            console.log(error);
-
         }
 
-    }
-
-
-    if (privateChannel) {
-
-        try {
-
+        if (privateChannel) {
             await supabaseClient.removeChannel(
                 privateChannel
             );
-
-        } catch (error) {
-
-            console.log(error);
-
         }
 
+    } catch (error) {
+
+        console.error(
+            "Erreur déconnexion :",
+            error
+        );
     }
-
-
-    presenceChannel = null;
-
-    publicChannel = null;
-
-    privateChannel = null;
 
     currentUser = null;
 
-    selectedPrivateUser = null;
-
     connectedUsers.clear();
 
-    privateMessages.clear();
+    messages = [];
 
-
-    const profileForm =
-        document.getElementById(
-            'profileForm'
-        );
-
-
-    if (profileForm) {
-
-        profileForm.reset();
-
-    }
-
-
-    const loginSection =
-        document.getElementById(
-            'loginSection'
-        );
-
-
-    if (loginSection) {
-
-        loginSection.style.display =
-            'block';
-
-    }
-
-
-    const chatSection =
-        document.getElementById(
-            'chatSection'
-        );
-
+    presenceChannel = null;
+    publicChannel = null;
+    privateChannel = null;
 
     if (chatSection) {
-
-        chatSection.style.display =
-            'none';
-
+        chatSection.style.display = "none";
     }
 
-
-    const privateModal =
-        document.getElementById(
-            'privateModal'
-        );
-
-
-    if (privateModal) {
-
-        privateModal.style.display =
-            'none';
-
+    if (loginSection) {
+        loginSection.style.display = "block";
     }
 
-
-    const usersList =
-        document.getElementById(
-            'usersList'
-        );
-
-
-    if (usersList) {
-
-        usersList.innerHTML = '';
-
+    if (profileForm) {
+        profileForm.reset();
     }
-
-
-    const onlineCount =
-        document.getElementById(
-            'onlineCount'
-        );
-
-
-    if (onlineCount) {
-
-        onlineCount.textContent =
-            '0';
-
-    }
-
-
-    const messagesContainer =
-        document.getElementById(
-            'messages'
-        );
-
 
     if (messagesContainer) {
-
-        messagesContainer.innerHTML =
-            '<div class="message system">Bienvenue dans OceanChat ! 👋</div>';
-
+        messagesContainer.innerHTML = "";
     }
 
+    if (usersList) {
+        usersList.innerHTML = "";
+    }
 }
 
+// ------------------------------------------------------
+// BOUTON ENVOYER
+// ------------------------------------------------------
 
-// ======================================================
-// TOUCHE ENTRÉE
-// ======================================================
+const sendButton =
+    document.getElementById("sendButton");
 
-const messageInput =
-    document.getElementById(
-        'messageInput'
+if (sendButton) {
+
+    sendButton.addEventListener(
+        "click",
+        function (event) {
+
+            event.preventDefault();
+
+            sendMessage();
+        }
     );
+}
 
+// ------------------------------------------------------
+// TOUCHE ENTRÉE - CHAT PUBLIC
+// ------------------------------------------------------
 
 if (messageInput) {
 
     messageInput.addEventListener(
-        'keypress',
-        function(e) {
+        "keydown",
+        function (event) {
 
             if (
-                e.key === 'Enter'
+                event.key === "Enter" &&
+                !event.shiftKey
             ) {
 
-                e.preventDefault();
+                event.preventDefault();
 
                 sendMessage();
-
             }
-
         }
     );
-
 }
 
-
-const privateMessageInput =
-    document.getElementById(
-        'privateMessageInput'
-    );
-
+// ------------------------------------------------------
+// TOUCHE ENTRÉE - CHAT PRIVÉ
+// ------------------------------------------------------
 
 if (privateMessageInput) {
 
     privateMessageInput.addEventListener(
-        'keypress',
-        function(e) {
+        "keydown",
+        function (event) {
 
             if (
-                e.key === 'Enter'
+                event.key === "Enter" &&
+                !event.shiftKey
             ) {
 
-                e.preventDefault();
+                event.preventDefault();
 
                 sendPrivateMessage();
-
             }
-
         }
     );
-
 }
 
+// ------------------------------------------------------
+// BOUTON CHAT PRIVÉ
+// ------------------------------------------------------
 
-// ======================================================
-// INSCRIPTION
-// ======================================================
-
-const signupForm =
+const privateSendButton =
     document.getElementById(
-        'signupForm'
+        "privateSendButton"
     );
 
+if (privateSendButton) {
 
-if (signupForm) {
+    privateSendButton.addEventListener(
+        "click",
+        function (event) {
 
-    signupForm.addEventListener(
-        'submit',
-        function(e) {
+            event.preventDefault();
 
-            e.preventDefault();
+            sendPrivateMessage();
+        }
+    );
+}
+
+// ------------------------------------------------------
+// BOUTON FERMER CHAT PRIVÉ
+// ------------------------------------------------------
+
+const privateCloseButton =
+    document.getElementById(
+        "privateCloseButton"
+    );
+
+if (privateCloseButton) {
+
+    privateCloseButton.addEventListener(
+        "click",
+        function (event) {
+
+            event.preventDefault();
+
+            closePrivateChat();
+        }
+    );
+}
+
+// ------------------------------------------------------
+// LOGOUT GLOBAL
+// ------------------------------------------------------
+
+const logoutButton =
+    document.getElementById("logoutButton");
+
+if (logoutButton) {
+
+    logoutButton.addEventListener(
+        "click",
+        function (event) {
+
+            event.preventDefault();
+
+            logout();
+        }
+    );
+}
+
+// ------------------------------------------------------
+// INSCRIPTION
+// ------------------------------------------------------
+
+const signupButton =
+    document.getElementById(
+        "signupButton"
+    );
+
+if (signupButton) {
+
+    signupButton.addEventListener(
+        "click",
+        function () {
 
             alert(
-                "L'inscription avec Supabase Auth sera activée prochainement."
+                "La création de comptes sera activée avec Supabase Auth."
             );
-
         }
     );
-
 }
 
-
-// ======================================================
-// SÉCURITÉ
-// ======================================================
-
-function escapeHtml(text) {
-
-    const div =
-        document.createElement(
-            'div'
-        );
-
-    // CORRECTION DE L'ERREUR =p
-    div.textContent =
-        String(text);
-
-    return div.innerHTML;
-
-}
-
-
-// ======================================================
-// OCEANCHAT PRÊT
-// ======================================================
+// ------------------------------------------------------
+// INITIALISATION
+// ------------------------------------------------------
 
 console.log(
-    '🌊 OceanChat est prêt !'
+    "🌊 OceanChat chargé correctement."
 );
-```
